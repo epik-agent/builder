@@ -1,20 +1,105 @@
 import express from 'express'
-import { WebSocketServer } from 'ws'
+import { WebSocketServer, WebSocket } from 'ws'
 import { createServer } from 'http'
+import type { AgentId, ServerMessage } from '../client/types.ts'
+import { createAgentPool } from './agentPool.ts'
+import { getNatsConnection, TOPIC_SUPERVISOR } from './nats.ts'
+import { loadIssueGraph } from './github.ts'
 
 export const app = express()
 app.use(express.json())
 
-app.get('/api/health', (_req, res) => {
-  res.json({ ok: true })
-})
-
 export const server = createServer(app)
 export const wss = new WebSocketServer({ server, path: '/ws' })
 
-wss.on('connection', () => {
-  // WebSocket connections will be handled here
+// ---------------------------------------------------------------------------
+// Agent pool initialisation
+// ---------------------------------------------------------------------------
+
+const poolPromise = createAgentPool()
+
+// ---------------------------------------------------------------------------
+// REST endpoints
+// ---------------------------------------------------------------------------
+
+app.get('/api/issues', async (req, res) => {
+  const repo = req.query['repo']
+  if (typeof repo !== 'string' || !repo) {
+    res.status(400).json({ error: 'Missing required query parameter: repo' })
+    return
+  }
+  try {
+    const graph = await loadIssueGraph(repo)
+    res.json(graph)
+  } catch (err) {
+    res.status(500).json({ error: String(err) })
+  }
 })
+
+app.get('/api/pool', async (_req, res) => {
+  const pool = await poolPromise
+  res.json(pool.getPool())
+})
+
+app.post('/api/start', async (_req, res) => {
+  try {
+    const nc = await getNatsConnection()
+    nc.publish(TOPIC_SUPERVISOR, 'start')
+    res.json({ ok: true })
+  } catch (err) {
+    res.status(500).json({ error: String(err) })
+  }
+})
+
+app.post('/api/message', async (req, res) => {
+  const { agentId, text } = req.body as { agentId?: AgentId; text?: string }
+  if (!agentId || !text) {
+    res.status(400).json({ error: 'Missing required fields: agentId, text' })
+    return
+  }
+  const pool = await poolPromise
+  pool.injectMessage(agentId, text)
+  res.json({ ok: true })
+})
+
+app.post('/api/interrupt', async (req, res) => {
+  const { agentId } = req.body as { agentId?: AgentId }
+  if (!agentId) {
+    res.status(400).json({ error: 'Missing required field: agentId' })
+    return
+  }
+  const pool = await poolPromise
+  pool.interrupt(agentId)
+  res.json({ ok: true })
+})
+
+// ---------------------------------------------------------------------------
+// WebSocket server
+// ---------------------------------------------------------------------------
+
+wss.on('connection', async (ws) => {
+  const pool = await poolPromise
+
+  // Send current pool state immediately on connect
+  const poolStateMsg: ServerMessage = { type: 'pool_state', pool: pool.getPool() }
+  ws.send(JSON.stringify(poolStateMsg))
+
+  // Register listener to stream agent events to this client
+  const unregister = pool.registerListener((agentId, event) => {
+    if (ws.readyState === WebSocket.OPEN) {
+      const msg: ServerMessage = { type: 'agent_event', agentId, event }
+      ws.send(JSON.stringify(msg))
+    }
+  })
+
+  ws.on('close', () => {
+    unregister()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Server startup
+// ---------------------------------------------------------------------------
 
 if (process.argv[1] === new URL(import.meta.url).pathname) {
   const PORT = 3001
