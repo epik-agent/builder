@@ -52,9 +52,9 @@ export interface IssueNode {
   title: string
   /** Whether the issue is open or closed. */
   state: 'open' | 'closed'
-  /** Issue type label, or `null` if unlabelled. */
+  /** Issue type label, or null if unlabelled. */
   type: 'Feature' | 'Task' | 'Bug' | null
-  /** `true` when this node belongs to a different feature. */
+  /** true when this node belongs to a different feature. */
   external: boolean
   /** Issue numbers that must be resolved before this one can start. */
   blockedBy: number[]
@@ -87,13 +87,13 @@ export type ToolBlock = { type: 'tool_use'; name: string; input: unknown }
 /** A tool-result block appended after the agent processes a tool response. */
 export type ToolResultBlock = { type: 'tool_result'; content: unknown }
 
-/** Union of all content block variants that can appear in an {@link AssistantMessage}. */
+/** Union of all content block variants that can appear in an AssistantMessage. */
 export type Block = TextBlock | ToolBlock | ToolResultBlock
 
 /** A message sent by the human user. */
 export type UserMessage = { role: 'user'; text: string }
 
-/** A message produced by the assistant, composed of one or more {@link Block}s. */
+/** A message produced by the assistant, composed of one or more Blocks. */
 export type AssistantMessage = { role: 'assistant'; blocks: Block[] }
 
 /** A visual marker inserted into the chat history when the SDK compacts the context window. */
