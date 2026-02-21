@@ -1,4 +1,4 @@
-import { render, screen, fireEvent} from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import userEvent from '@testing-library/user-event'
 import ConsolePane, { ToolUseCard, ToolResultCard } from './ConsolePane'
@@ -90,9 +90,7 @@ describe('ConsolePane', () => {
     const onInterrupt = vi.fn()
     const user = userEvent.setup()
 
-    render(
-      <ConsolePane agentId={agentId} events={[]} onSend={noop} onInterrupt={onInterrupt} />,
-    )
+    render(<ConsolePane agentId={agentId} events={[]} onSend={noop} onInterrupt={onInterrupt} />)
 
     // Make the agent busy by having the user send a message (sets busy=true)
     const textarea = screen.getByPlaceholderText(/Message Claude/i)
@@ -122,7 +120,9 @@ describe('ConsolePane', () => {
   it('renders markdown with code and link elements (exercises custom code and a renderers)', () => {
     // ReactMarkdown invokes the custom `code` and `a` render components when
     // the text contains inline code and links respectively.
-    const events: AgentEvent[] = [{ kind: 'text_delta', text: 'Use `npm install` and see [docs](https://example.com).' }]
+    const events: AgentEvent[] = [
+      { kind: 'text_delta', text: 'Use `npm install` and see [docs](https://example.com).' },
+    ]
     // Prepend a user_send so a turn is "in progress" and the text ends up in an assistant bubble
     const { rerender } = render(
       <ConsolePane agentId={agentId} events={[]} onSend={noop} onInterrupt={noop} />,
@@ -145,10 +145,7 @@ describe('ConsolePane', () => {
     expect(screen.getByText('First')).toBeInTheDocument()
 
     // Add second event (first event should not be re-processed)
-    const events2: AgentEvent[] = [
-      { kind: 'text_delta', text: 'First' },
-      { kind: 'turn_end' },
-    ]
+    const events2: AgentEvent[] = [{ kind: 'text_delta', text: 'First' }, { kind: 'turn_end' }]
     rerender(<ConsolePane agentId={agentId} events={events2} onSend={noop} onInterrupt={noop} />)
     // Agent should now be not-busy after turn_end
     expect(screen.getByPlaceholderText(/Message Claude/i)).toBeInTheDocument()

@@ -23,13 +23,8 @@ describe('nats module (unit)', () => {
     const mockConn = makeMockConn()
     vi.doMock('nats', () => ({ connect: vi.fn(async () => mockConn) }))
 
-    const {
-      TOPIC_SUPERVISOR,
-      TOPIC_WORKER_0,
-      TOPIC_WORKER_1,
-      TOPIC_WORKER_2,
-      TOPIC_LOG,
-    } = await import('../server/nats.ts')
+    const { TOPIC_SUPERVISOR, TOPIC_WORKER_0, TOPIC_WORKER_1, TOPIC_WORKER_2, TOPIC_LOG } =
+      await import('../server/nats.ts')
 
     expect(TOPIC_SUPERVISOR).toBe('epik.supervisor')
     expect(TOPIC_WORKER_0).toBe('epik.worker.0')
@@ -66,9 +61,7 @@ describe('nats module (unit)', () => {
   it('getNatsConnection() reconnects when the existing connection is closed', async () => {
     const closedConn = makeMockConn(true)
     const freshConn = makeMockConn(false)
-    const mockConnect = vi.fn()
-      .mockResolvedValueOnce(closedConn)
-      .mockResolvedValueOnce(freshConn)
+    const mockConnect = vi.fn().mockResolvedValueOnce(closedConn).mockResolvedValueOnce(freshConn)
     vi.doMock('nats', () => ({ connect: mockConnect }))
 
     const { getNatsConnection } = await import('../server/nats.ts')
@@ -97,9 +90,7 @@ describe('nats module (unit)', () => {
 
     expect(mockConn.close).toHaveBeenCalledOnce()
 
-    // After closing, a new call should reconnect
-    const mockConn2 = makeMockConn()
-    // We can't easily re-mock here; just verify close was called
+    // After closing, a new call should reconnect (verified via the separate reconnect test)
     expect(mockConn.close).toHaveBeenCalledTimes(1)
   })
 
@@ -173,9 +164,7 @@ describe('nats module (unit)', () => {
   it('closeNatsConnection() sets connection to null so the next call reconnects', async () => {
     const mockConn = makeMockConn()
     const mockConn2 = makeMockConn()
-    const mockConnect = vi.fn()
-      .mockResolvedValueOnce(mockConn)
-      .mockResolvedValueOnce(mockConn2)
+    const mockConnect = vi.fn().mockResolvedValueOnce(mockConn).mockResolvedValueOnce(mockConn2)
     vi.doMock('nats', () => ({ connect: mockConnect }))
 
     const { getNatsConnection, closeNatsConnection } = await import('../server/nats.ts')

@@ -245,9 +245,7 @@ describe('IssueGraph', () => {
     // Re-render with a NEW agentIssueMap object (forces effect re-run) but same events.
     // Now agentEvents.length (1) is NOT > prevCount (1) → false branch of the condition
     const agentIssueMapV2: Partial<Record<AgentId, number>> = { 'worker-0': 1 }
-    rerender(
-      <IssueGraph graph={sampleGraph} events={eventsV1} agentIssueMap={agentIssueMapV2} />,
-    )
+    rerender(<IssueGraph graph={sampleGraph} events={eventsV1} agentIssueMap={agentIssueMapV2} />)
 
     // After the second render, issuesToBlink is empty → early return hit
     expect(capturedGraphData?.nodes).toBeDefined()
@@ -267,7 +265,9 @@ describe('IssueGraph', () => {
     )
 
     // Fire blink-on timer
-    await act(async () => { vi.advanceTimersByTime(1) })
+    await act(async () => {
+      vi.advanceTimersByTime(1)
+    })
 
     // Unmount while the blink-off timer is still pending — should not throw
     expect(() => unmount()).not.toThrow()
@@ -289,10 +289,14 @@ describe('IssueGraph', () => {
     )
 
     // Fire blink-on timer
-    await act(async () => { vi.advanceTimersByTime(1) })
+    await act(async () => {
+      vi.advanceTimersByTime(1)
+    })
 
     // Advance partway through blink duration, then trigger another event for the same issue
-    await act(async () => { vi.advanceTimersByTime(200) })
+    await act(async () => {
+      vi.advanceTimersByTime(200)
+    })
 
     const eventsV2: Record<AgentId, AgentEvent[]> = {
       ...noEvents,
@@ -302,13 +306,13 @@ describe('IssueGraph', () => {
       ],
     }
     await act(async () => {
-      rerender(
-        <IssueGraph graph={sampleGraph} events={eventsV2} agentIssueMap={agentIssueMap} />,
-      )
+      rerender(<IssueGraph graph={sampleGraph} events={eventsV2} agentIssueMap={agentIssueMap} />)
     })
 
     // Fire the new blink-on timer
-    await act(async () => { vi.advanceTimersByTime(1) })
+    await act(async () => {
+      vi.advanceTimersByTime(1)
+    })
 
     // Node 1 should still be blinking (existing timer was cleared and reset)
     const node1 = capturedGraphData!.nodes.find((n) => n.id === 1)!

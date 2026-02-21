@@ -112,8 +112,8 @@ describe('App', () => {
     await user.click(loadButton)
 
     // fetch should not have been called with /api/issues
-    const issuesCalls = mockFetch.mock.calls.filter((args) =>
-      typeof args[0] === 'string' && (args[0] as string).includes('/api/issues'),
+    const issuesCalls = mockFetch.mock.calls.filter(
+      (args) => typeof args[0] === 'string' && (args[0] as string).includes('/api/issues'),
     )
     expect(issuesCalls).toHaveLength(0)
   })
