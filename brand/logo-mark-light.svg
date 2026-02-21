@@ -1,11 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
-  <!-- Epik node-graph constellation mark — light background variant -->
-  <line x1="14.5" y1="14.5" x2="49.5" y2="23.3" stroke="#0a0a0a" stroke-width="1.4" opacity="0.25"/>
-  <line x1="14.5" y1="14.5" x2="23.3" y2="49.5" stroke="#0a0a0a" stroke-width="1.4" opacity="0.25"/>
-  <line x1="49.5" y1="23.3" x2="40.7" y2="49.5" stroke="#0a0a0a" stroke-width="1.4" opacity="0.25"/>
-  <line x1="23.3" y1="49.5" x2="40.7" y2="49.5" stroke="#0a0a0a" stroke-width="1.4" opacity="0.25"/>
-  <circle cx="14.5" cy="14.5" r="7.3" fill="#00b377"/>
-  <circle cx="49.5" cy="23.3" r="5.8" fill="#0a0a0a"/>
-  <circle cx="23.3" cy="49.5" r="5.8" fill="#0a0a0a"/>
-  <circle cx="40.7" cy="49.5" r="4.7" fill="#00b377" opacity="0.7"/>
+  <line x1="16" y1="16" x2="48" y2="24" stroke="#171717" stroke-width="2" opacity="0.25"/>
+  <line x1="16" y1="16" x2="24" y2="48" stroke="#171717" stroke-width="2" opacity="0.25"/>
+  <line x1="48" y1="24" x2="40" y2="48" stroke="#171717" stroke-width="2" opacity="0.25"/>
+  <line x1="24" y1="48" x2="40" y2="48" stroke="#171717" stroke-width="2" opacity="0.25"/>
+  <circle cx="16" cy="16" r="6" fill="#00c07a"/>
+  <circle cx="48" cy="24" r="5" fill="#171717"/>
+  <circle cx="24" cy="48" r="5" fill="#171717"/>
+  <circle cx="40" cy="48" r="4" fill="#00c07a" opacity="0.7"/>
 </svg>

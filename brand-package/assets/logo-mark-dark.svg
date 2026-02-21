@@ -1,1 +1,10 @@
-Non-image binary files cannot be read directly. It is available at the following URL: https://v0chat-agent-data-prod.s3.us-east-1.amazonaws.com/vm-binary/tcIeu3JYPuv/e4bb59980621759ea2fd84f19247e4bbfee9576ac3a7358aac5d9e52fa24f2dc.svg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIA52KF4VHQDTZ5RDMT%2F20260221%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260221T183507Z&X-Amz-Expires=3600&X-Amz-Signature=7986458b23d79115ea22d6924674dd95653e5d27e11470d69867fb1dee92d677&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+  <line x1="16" y1="16" x2="48" y2="24" stroke="#e5e5e5" stroke-width="2" opacity="0.3"/>
+  <line x1="16" y1="16" x2="24" y2="48" stroke="#e5e5e5" stroke-width="2" opacity="0.3"/>
+  <line x1="48" y1="24" x2="40" y2="48" stroke="#e5e5e5" stroke-width="2" opacity="0.3"/>
+  <line x1="24" y1="48" x2="40" y2="48" stroke="#e5e5e5" stroke-width="2" opacity="0.3"/>
+  <circle cx="16" cy="16" r="6" fill="#00e599"/>
+  <circle cx="48" cy="24" r="5" fill="#e5e5e5"/>
+  <circle cx="24" cy="48" r="5" fill="#e5e5e5"/>
+  <circle cx="40" cy="48" r="4" fill="#00e599" opacity="0.7"/>
+</svg>
