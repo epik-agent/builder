@@ -36,7 +36,7 @@ export const defaultPool: PoolState = [
   { id: 'worker-2', role: 'worker', status: 'idle', sessionId: undefined },
 ]
 
-/** All-idle four-agent pool (as returned by a freshly initialised agentPool). */
+/** All-idle four-agent pool (as returned by a freshly initialized agentPool). */
 export const idlePool: PoolState = [
   { id: 'supervisor', role: 'supervisor', status: 'idle', sessionId: undefined },
   { id: 'worker-0', role: 'worker', status: 'idle', sessionId: undefined },

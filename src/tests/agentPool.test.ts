@@ -69,7 +69,7 @@ describe('agentPool', () => {
     runAgentImpl = async () => ({})
   })
 
-  it('initialises with 1 supervisor and 3 workers', async () => {
+  it('initializes with 1 supervisor and 3 workers', async () => {
     const pool = await makePool()
     const state = pool.getPool()
 
@@ -83,14 +83,14 @@ describe('agentPool', () => {
     expect(workers.map((w) => w.id).sort()).toEqual(['worker-0', 'worker-1', 'worker-2'])
   })
 
-  it('initialises all agents with idle status', async () => {
+  it('initializes all agents with idle status', async () => {
     const pool = await makePool()
     for (const agent of pool.getPool()) {
       expect(agent.status).toBe('idle')
     }
   })
 
-  it('initialises all agents with undefined sessionId', async () => {
+  it('initializes all agents with undefined sessionId', async () => {
     const pool = await makePool()
     for (const agent of pool.getPool()) {
       expect(agent.sessionId).toBeUndefined()

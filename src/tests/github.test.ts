@@ -85,7 +85,7 @@ const PR_FIXTURE_PENDING = [
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Build a mock exec function that resolves with the serialised fixture. */
+/** Build a mock exec function that resolves with the serialized fixture. */
 function makeExec(fixture: object[]): (args: string[]) => Promise<string> {
   return vi.fn().mockResolvedValue(JSON.stringify(fixture))
 }
@@ -156,7 +156,7 @@ describe('github', () => {
       expect(graph.nodes.find((n) => n.number === 3)?.type).toBe('Bug')
     })
 
-    it('sets type to null when no recognised label is present', async () => {
+    it('sets type to null when no recognized label is present', async () => {
       const graph = await loadIssueGraph('owner', 'repo', makeExec(ISSUE_FIXTURE))
       expect(graph.nodes.find((n) => n.number === 4)?.type).toBeNull()
       expect(graph.nodes.find((n) => n.number === 5)?.type).toBeNull()
