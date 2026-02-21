@@ -2,6 +2,7 @@ import { render, screen, act } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import App from './App'
 import { themes } from './theme'
+import type { AgentId, AgentEvent } from './types'
 
 /** Convert a hex color like "#a0707a" to "rgb(160, 112, 122)" for jsdom comparison. */
 function hexToRgb(hex: string): string {
@@ -318,6 +319,81 @@ describe('App', () => {
     // Now reject the fetch — the catch handler should skip setGraph because cancelled=true
     await act(async () => {
       rejectFetch(new Error('Network gone'))
+    })
+  })
+
+  describe('agentIssueMap wiring', () => {
+    // We need to capture IssueGraph props. We mock IssueGraph here (in addition
+    // to the react-force-graph-2d mock above) so we can inspect what App passes.
+    let capturedAgentIssueMap: Partial<Record<AgentId, number>> | undefined
+
+    beforeEach(async () => {
+      capturedAgentIssueMap = undefined
+      const IssueGraphModule = await import('./IssueGraph')
+      vi.spyOn(IssueGraphModule, 'default').mockImplementation(
+        (props: { agentIssueMap?: Partial<Record<AgentId, number>> }) => {
+          capturedAgentIssueMap = props.agentIssueMap
+          return null
+        },
+      )
+    })
+
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    it('passes agentIssueMap=undefined to IssueGraph when no inject events exist', async () => {
+      // Default mock already returns no events (empty arrays for all agents).
+      await act(async () => {
+        render(<App />)
+      })
+      // With no inject events, agentIssueMap should be an empty object (all keys absent).
+      expect(capturedAgentIssueMap).toEqual({})
+    })
+
+    it('passes agentIssueMap with correct entry when worker has inject event', async () => {
+      // Override useAgentEvents to return an inject event for worker-0
+      const useAgentEventsModule = await import('./useAgentEvents')
+      const eventsWithInject: Record<AgentId, AgentEvent[]> = {
+        supervisor: [],
+        'worker-0': [{ kind: 'inject', text: 'Please work on issue #17.' }],
+        'worker-1': [],
+        'worker-2': [],
+      }
+      vi.spyOn(useAgentEventsModule, 'useAgentEvents').mockReturnValue({
+        events: eventsWithInject,
+        pool: [],
+        sendMessage: vi.fn(),
+        interrupt: vi.fn(),
+      })
+
+      await act(async () => {
+        render(<App />)
+      })
+
+      expect(capturedAgentIssueMap?.['worker-0']).toBe(17)
+    })
+
+    it('clears agentIssueMap entry after turn_end follows inject', async () => {
+      const useAgentEventsModule = await import('./useAgentEvents')
+      const eventsWithTurnEnd: Record<AgentId, AgentEvent[]> = {
+        supervisor: [],
+        'worker-0': [{ kind: 'inject', text: 'Please work on issue #17.' }, { kind: 'turn_end' }],
+        'worker-1': [],
+        'worker-2': [],
+      }
+      vi.spyOn(useAgentEventsModule, 'useAgentEvents').mockReturnValue({
+        events: eventsWithTurnEnd,
+        pool: [],
+        sendMessage: vi.fn(),
+        interrupt: vi.fn(),
+      })
+
+      await act(async () => {
+        render(<App />)
+      })
+
+      expect(capturedAgentIssueMap?.['worker-0']).toBeUndefined()
     })
   })
 })

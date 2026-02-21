@@ -10,6 +10,7 @@ import AgentTabs from './AgentTabs'
 import IssueGraph from './IssueGraph'
 import { themes } from './theme'
 import { useAgentEvents } from './useAgentEvents'
+import { useAgentIssueMap } from './useAgentIssueMap'
 import { useTheme } from './useTheme'
 import type { IssueGraph as IssueGraphType } from './types'
 
@@ -49,6 +50,7 @@ export default function App() {
   const { theme, toggleTheme } = useTheme()
   const palette = themes[theme]
   const { events, pool, sendMessage, interrupt } = useAgentEvents()
+  const agentIssueMap = useAgentIssueMap(events)
   const [repo, setRepo] = useState<string>(repoFromUrl)
   const [repoInput, setRepoInput] = useState<string>(repoFromUrl)
   const [graph, setGraph] = useState<IssueGraphType>(EMPTY_GRAPH)
@@ -197,7 +199,7 @@ export default function App() {
 
       {/* Top 50%: Issue graph */}
       <div style={topPaneStyle}>
-        <IssueGraph graph={graph} events={events} />
+        <IssueGraph graph={graph} events={events} agentIssueMap={agentIssueMap} />
       </div>
 
       {/* Bottom 50%: Agent tabs */}
