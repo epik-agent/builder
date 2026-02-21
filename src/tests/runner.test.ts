@@ -119,7 +119,9 @@ describe('runAgent', () => {
   })
 
   it('emits error with fallback message when errors array is absent', async () => {
-    const { events } = await collect({ messages: [{ type: 'result', subtype: 'error', is_error: true }] })
+    const { events } = await collect({
+      messages: [{ type: 'result', subtype: 'error', is_error: true }],
+    })
     expect(events).toContainEqual({ kind: 'error', message: 'Unknown error' })
   })
 })
@@ -221,7 +223,9 @@ describe('nats_publish interception', () => {
     let capturedOptions: unknown = null
     await collect({
       messages: [],
-      opts: { config: { model: 'claude-sonnet-4-6', cwd: '/tmp', systemPrompt: 'You are a test agent.' } },
+      opts: {
+        config: { model: 'claude-sonnet-4-6', cwd: '/tmp', systemPrompt: 'You are a test agent.' },
+      },
       query: (opts) => {
         capturedOptions = opts
         return makeIterator([])
@@ -256,7 +260,9 @@ describe('nats_publish interception', () => {
   })
 
   it('does not throw when result message has is_error=false', async () => {
-    const { events } = await collect({ messages: [{ type: 'result', subtype: 'success', is_error: false }] })
+    const { events } = await collect({
+      messages: [{ type: 'result', subtype: 'success', is_error: false }],
+    })
     expect(events).toEqual([{ kind: 'turn_end' }])
   })
 
@@ -268,7 +274,10 @@ describe('nats_publish interception', () => {
 
   it('ignores user messages with text blocks that have no summary parameter', async () => {
     const messages = [
-      { type: 'user', message: { content: [{ type: 'text', text: 'regular text without parameter tags' }] } },
+      {
+        type: 'user',
+        message: { content: [{ type: 'text', text: 'regular text without parameter tags' }] },
+      },
     ]
     const { events } = await collect({ messages })
     expect(events).toEqual([{ kind: 'turn_end' }])
