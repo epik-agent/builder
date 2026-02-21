@@ -22,8 +22,12 @@ show a clear error: _"GitHub token not configured"_.
 ### With GitHub access
 
 ```bash
-GH_TOKEN=ghp_your_token_here docker compose up
+npm run docker
 ```
+
+This pulls your token from the `gh` CLI keyring automatically
+(`GH_TOKEN=$(gh auth token) docker compose up`). Requires `gh auth login`
+to have been run at least once.
 
 Open http://localhost:5173 and enter `epik-agent/builder` (or any
 `owner/repo`) in the toolbar. Click **Load** to fetch the issue graph.
@@ -57,6 +61,7 @@ Open http://localhost:5173/?repo=owner/repo.
 
 | Script                 | Description                                       |
 | ---------------------- | ------------------------------------------------- |
+| `npm run docker`       | Start Docker Compose with GH token from keyring   |
 | `npm run dev`          | Vite dev server + Express via tsx (hot reload)    |
 | `npm run server`       | Express server only (tsx watch)                   |
 | `npm run build`        | Type-check + Vite frontend bundle + server bundle |
