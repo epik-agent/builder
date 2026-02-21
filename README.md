@@ -55,15 +55,15 @@ Open http://localhost:5173/?repo=owner/repo.
 
 ### Scripts
 
-| Script                  | Description                                        |
-| ----------------------- | -------------------------------------------------- |
-| `npm run dev`           | Vite dev server + Express via tsx (hot reload)     |
-| `npm run server`        | Express server only (tsx watch)                    |
-| `npm run build`         | Type-check + Vite frontend bundle + server bundle  |
-| `npm run build:server`  | esbuild server bundle only → `dist/server.js`      |
-| `npm run lint`          | ESLint                                             |
-| `npm run format`        | Prettier                                           |
-| `npm test`              | Vitest unit tests                                  |
+| Script                 | Description                                       |
+| ---------------------- | ------------------------------------------------- |
+| `npm run dev`          | Vite dev server + Express via tsx (hot reload)    |
+| `npm run server`       | Express server only (tsx watch)                   |
+| `npm run build`        | Type-check + Vite frontend bundle + server bundle |
+| `npm run build:server` | esbuild server bundle only → `dist/server.js`     |
+| `npm run lint`         | ESLint                                            |
+| `npm run format`       | Prettier                                          |
+| `npm test`             | Vitest unit tests                                 |
 
 ### Build strategy
 
@@ -74,6 +74,7 @@ hot module replacement on `:5173`. The Express server runs directly from
 TypeScript source via `tsx watch` on `:3001`.
 
 **Production build** (`npm run build`): three sequential steps:
+
 1. `tsc -b` — type-checks the whole project (no output files)
 2. `vite build` — bundles the React frontend into `dist/`
 3. `esbuild` — bundles the Express server into `dist/server.js`, with

@@ -215,6 +215,7 @@ Open `http://localhost:5173/?repo=owner/repo`.
 The Express server runs from TypeScript source via `tsx watch` on `:3001`.
 
 **Production** (`npm run build`): three sequential steps:
+
 1. `tsc -b` — type-checks the whole project (no output files)
 2. `vite build` — bundles the React frontend into `dist/`
 3. `esbuild` — bundles the Express server into `dist/server.js`, leaving

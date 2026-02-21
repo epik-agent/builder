@@ -19,7 +19,6 @@
 import express from 'express'
 import { WebSocketServer, WebSocket } from 'ws'
 import { createServer } from 'http'
-import { existsSync } from 'fs'
 import { resolve } from 'path'
 import { fileURLToPath } from 'url'
 import type { AgentId, ServerMessage } from '../client/types.ts'
