@@ -204,7 +204,13 @@ describe('github', () => {
 
     it('rejects on gh cli error', async () => {
       const exec = makeExecError(new Error('gh: not found'))
-      await expect(loadIssueGraph('owner', 'repo', exec)).rejects.toThrow('gh: not found')
+      let caught: Error | null = null
+      try {
+        await loadIssueGraph('owner', 'repo', exec)
+      } catch (err) {
+        caught = err as Error
+      }
+      expect(caught?.message).toContain('gh: not found')
     })
   })
 
@@ -297,11 +303,15 @@ describe('github', () => {
       // Point PATH away from gh so execFile fails
       const savedPath = process.env['PATH']
       process.env['PATH'] = '/nonexistent'
+      let threw = false
       try {
-        await expect(runGhCommand(['version'])).rejects.toThrow()
+        await runGhCommand(['version'])
+      } catch {
+        threw = true
       } finally {
         process.env['PATH'] = savedPath
       }
+      expect(threw).toBe(true)
     })
 
     it('resolves with stdout when the command succeeds', async () => {
