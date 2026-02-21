@@ -1,6 +1,15 @@
 import { render, screen, act } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import App from './App'
+import { themes } from './theme'
+
+/** Convert a hex color like "#a0707a" to "rgb(160, 112, 122)" for jsdom comparison. */
+function hexToRgb(hex: string): string {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return `rgb(${r}, ${g}, ${b})`
+}
 
 // Mock useAgentEvents to avoid WebSocket connections in tests
 vi.mock('./useAgentEvents', () => ({
@@ -142,6 +151,57 @@ describe('App', () => {
     // Now resolve the fetch — the stale setState should be suppressed (no warning thrown)
     await act(async () => {
       resolveFetch({ ok: true, json: async () => ({ nodes: [] }) })
+    })
+  })
+
+  describe('toolbar contrast — colors from theme palette', () => {
+    it('toolbar background uses theme bar color', () => {
+      const { container } = render(<App />)
+      const toolbar = container.querySelector('[aria-label="toolbar"]') as HTMLElement
+      expect(toolbar).toBeInTheDocument()
+      expect(toolbar.style.background).toBe(hexToRgb(themes.dark.bg.bar))
+    })
+
+    it('repo input background uses theme input color', () => {
+      const { container } = render(<App />)
+      const input = container.querySelector('input[aria-label="GitHub repository"]') as HTMLElement
+      expect(input.style.background).toBe(hexToRgb(themes.dark.bg.input))
+    })
+
+    it('repo input border color uses theme border color', () => {
+      const { container } = render(<App />)
+      const input = container.querySelector('input[aria-label="GitHub repository"]') as HTMLElement
+      expect(input.style.borderColor).toBe(hexToRgb(themes.dark.border.strong))
+    })
+
+    it('repo input text color uses theme primary text color', () => {
+      const { container } = render(<App />)
+      const input = container.querySelector('input[aria-label="GitHub repository"]') as HTMLElement
+      expect(input.style.color).toBe(hexToRgb(themes.dark.text.primary))
+    })
+
+    it('Load button background uses theme inputBar color', () => {
+      const { getByRole } = render(<App />)
+      const loadButton = getByRole('button', { name: /load/i }) as HTMLElement
+      expect(loadButton.style.background).toBe(hexToRgb(themes.dark.bg.inputBar))
+    })
+
+    it('Load button text color uses theme secondary text color', () => {
+      const { getByRole } = render(<App />)
+      const loadButton = getByRole('button', { name: /load/i }) as HTMLElement
+      expect(loadButton.style.color).toBe(hexToRgb(themes.dark.text.secondary))
+    })
+
+    it('Start button background uses theme accent color', () => {
+      const { getByRole } = render(<App />)
+      const startButton = getByRole('button', { name: /start/i }) as HTMLElement
+      expect(startButton.style.background).toBe(hexToRgb(themes.dark.accent))
+    })
+
+    it('toolbar bottom border uses theme border strong color', () => {
+      const { container } = render(<App />)
+      const toolbar = container.querySelector('[aria-label="toolbar"]') as HTMLElement
+      expect(toolbar.style.borderBottomColor).toBe(hexToRgb(themes.dark.border.strong))
     })
   })
 
