@@ -286,6 +286,14 @@ describe('App', () => {
     }
   })
 
+  it('does not scroll on initial load', () => {
+    const spy = vi.fn()
+    HTMLElement.prototype.scrollIntoView = spy
+    render(<App />)
+    expect(spy).not.toHaveBeenCalled()
+    HTMLElement.prototype.scrollIntoView = () => {}
+  })
+
   it('unmounts cleanly when fetch rejects after unmount (cancelled flag suppresses setGraph)', async () => {
     // Make fetch reject after a delay
     let rejectFetch!: (err: Error) => void

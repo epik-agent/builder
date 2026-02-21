@@ -8,6 +8,13 @@ body {
   margin: 0;
 }
 
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
 /* Override hljs theme based on html[data-theme] */
 :root[data-theme='dark'] .hljs {
   color: #c9d1d9;
