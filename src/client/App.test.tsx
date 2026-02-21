@@ -34,6 +34,18 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
+/** Render App, type a repo into the input, click Load, and return unmount + the render result. */
+async function renderAndLoadRepo() {
+  const user = userEvent.setup()
+  const result = render(<App />)
+  const input = result.getByPlaceholderText(/owner\/repo/i)
+  await user.clear(input)
+  await user.type(input, 'owner/repo')
+  const loadButton = result.getByRole('button', { name: /load/i })
+  await user.click(loadButton)
+  return result
+}
+
 describe('App', () => {
   it('mounts without errors', () => {
     render(<App />)
@@ -128,14 +140,7 @@ describe('App', () => {
       }),
     )
 
-    const user = userEvent.setup()
-    const { getByRole, getByPlaceholderText, unmount } = render(<App />)
-
-    const input = getByPlaceholderText(/owner\/repo/i)
-    await user.clear(input)
-    await user.type(input, 'owner/repo')
-    const loadButton = getByRole('button', { name: /load/i })
-    await user.click(loadButton)
+    const { unmount } = await renderAndLoadRepo()
 
     // Unmount while fetch is in-flight — this sets the cancelled flag
     unmount()
@@ -294,14 +299,7 @@ describe('App', () => {
       }),
     )
 
-    const user = userEvent.setup()
-    const { getByRole, getByPlaceholderText, unmount } = render(<App />)
-
-    const input = getByPlaceholderText(/owner\/repo/i)
-    await user.clear(input)
-    await user.type(input, 'owner/repo')
-    const loadButton = getByRole('button', { name: /load/i })
-    await user.click(loadButton)
+    const { unmount } = await renderAndLoadRepo()
 
     // Unmount while fetch is in-flight
     unmount()
