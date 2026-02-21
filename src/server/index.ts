@@ -19,7 +19,6 @@
 import express from 'express'
 import { WebSocketServer, WebSocket } from 'ws'
 import { createServer } from 'http'
-import { existsSync } from 'fs'
 import { resolve } from 'path'
 import { fileURLToPath } from 'url'
 import type { AgentId, ServerMessage } from '../client/types.ts'
@@ -41,9 +40,8 @@ app.use(express.json())
 // Vite dev server handles the frontend separately.
 // ---------------------------------------------------------------------------
 
-const distDir = resolve(fileURLToPath(import.meta.url), '../../../dist')
-
-if (existsSync(distDir)) {
+if (process.env['SERVE_STATIC']) {
+  const distDir = resolve(fileURLToPath(import.meta.url), '..')
   app.use(express.static(distDir))
 }
 

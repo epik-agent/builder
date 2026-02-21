@@ -40,17 +40,12 @@ RUN apt-get update && \
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
-# Copy compiled artifacts from builder stage
+# Copy compiled artifacts from builder stage (frontend + bundled server)
 COPY --from=builder /app/dist ./dist
-
-# Copy server source (tsx compiles TypeScript at runtime in production)
-COPY --from=builder /app/src ./src
-COPY --from=builder /app/tsconfig.json ./tsconfig.json
-COPY --from=builder /app/tsconfig.node.json ./tsconfig.node.json
-COPY --from=builder /app/tsconfig.app.json ./tsconfig.app.json
 
 # Optional GitHub token — the app starts without it but repo loading will
 # return a clear error if it is absent.
+ENV SERVE_STATIC="1"
 ENV GH_TOKEN=""
 
 # NATS server URL — overridden by docker-compose to point at the nats service
@@ -61,4 +56,4 @@ ENV PORT=5173
 
 EXPOSE 5173
 
-CMD ["node", "--import", "tsx/esm", "src/server/index.ts"]
+CMD ["node", "dist/server.js"]
