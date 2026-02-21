@@ -51,7 +51,7 @@ vi.mock('../server/github.ts', () => ({
 vi.mock('fs', async () => {
   const actual = await vi.importActual<typeof import('fs')>('fs')
   const mockExistsSync = vi.fn((p: string) => {
-    if (typeof p === 'string' && p.endsWith('/dist')) return true
+    if (p.endsWith('/dist')) return true
     return actual.existsSync(p)
   })
   return {
