@@ -191,6 +191,32 @@ describe('ConsolePane', () => {
     expect(onSend).toHaveBeenCalledWith('Direct message')
   })
 
+  it('does not scroll on initial render with no messages', () => {
+    const spy = vi.fn()
+    HTMLElement.prototype.scrollIntoView = spy
+    render(<ConsolePane agentId={agentId} events={[]} onSend={noop} onInterrupt={noop} />)
+    expect(spy).not.toHaveBeenCalled()
+    HTMLElement.prototype.scrollIntoView = () => {}
+  })
+
+  it('scrolls to bottom when a message arrives', () => {
+    const spy = vi.fn()
+    HTMLElement.prototype.scrollIntoView = spy
+    const { rerender } = render(
+      <ConsolePane agentId={agentId} events={[]} onSend={noop} onInterrupt={noop} />,
+    )
+    rerender(
+      <ConsolePane
+        agentId={agentId}
+        events={[{ kind: 'text_delta', text: 'Hello' }]}
+        onSend={noop}
+        onInterrupt={noop}
+      />,
+    )
+    expect(spy).toHaveBeenCalled()
+    HTMLElement.prototype.scrollIntoView = () => {}
+  })
+
   it('enqueues a second message when agent is busy', async () => {
     const onSend = vi.fn()
     const user = userEvent.setup()

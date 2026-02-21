@@ -251,6 +251,7 @@ export default function ConsolePane(props: ConsolePaneProps) {
   const processedCountRef = useRef(0)
 
   useEffect(() => {
+    if (messages.length === 0) return
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
