@@ -3,24 +3,12 @@ import { render, screen, act } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import App from './App'
 import { themes } from './theme'
-import type { AgentId, AgentEvent } from './types'
-
-/** Convert a hex color like "#a0707a" to "rgb(160, 112, 122)" for jsdom comparison. */
-function hexToRgb(hex: string): string {
-  const r = parseInt(hex.slice(1, 3), 16)
-  const g = parseInt(hex.slice(3, 5), 16)
-  const b = parseInt(hex.slice(5, 7), 16)
-  return `rgb(${r}, ${g}, ${b})`
-}
+import { hexToRgb, makeEvents, makeUseAgentEventsMock } from './test-fixtures'
+import type { AgentId } from './types'
 
 // Mock useAgentEvents to avoid WebSocket connections in tests
 vi.mock('./useAgentEvents', () => ({
-  useAgentEvents: () => ({
-    events: { supervisor: [], 'worker-0': [], 'worker-1': [], 'worker-2': [] },
-    pool: [],
-    sendMessage: vi.fn(),
-    interrupt: vi.fn(),
-  }),
+  useAgentEvents: () => makeUseAgentEventsMock(),
 }))
 
 // Mock react-force-graph-2d — canvas is not available in jsdom
@@ -355,14 +343,8 @@ describe('App', () => {
     it('passes agentIssueMap with correct entry when worker has inject event', async () => {
       // Override useAgentEvents to return an inject event for worker-0
       const useAgentEventsModule = await import('./useAgentEvents')
-      const eventsWithInject: Record<AgentId, AgentEvent[]> = {
-        supervisor: [],
-        'worker-0': [{ kind: 'inject', text: 'Please work on issue #17.' }],
-        'worker-1': [],
-        'worker-2': [],
-      }
       vi.spyOn(useAgentEventsModule, 'useAgentEvents').mockReturnValue({
-        events: eventsWithInject,
+        events: makeEvents({ 'worker-0': [{ kind: 'inject', text: 'Please work on issue #17.' }] }),
         pool: [],
         sendMessage: vi.fn(),
         interrupt: vi.fn(),
@@ -377,14 +359,10 @@ describe('App', () => {
 
     it('clears agentIssueMap entry after turn_end follows inject', async () => {
       const useAgentEventsModule = await import('./useAgentEvents')
-      const eventsWithTurnEnd: Record<AgentId, AgentEvent[]> = {
-        supervisor: [],
-        'worker-0': [{ kind: 'inject', text: 'Please work on issue #17.' }, { kind: 'turn_end' }],
-        'worker-1': [],
-        'worker-2': [],
-      }
       vi.spyOn(useAgentEventsModule, 'useAgentEvents').mockReturnValue({
-        events: eventsWithTurnEnd,
+        events: makeEvents({
+          'worker-0': [{ kind: 'inject', text: 'Please work on issue #17.' }, { kind: 'turn_end' }],
+        }),
         pool: [],
         sendMessage: vi.fn(),
         interrupt: vi.fn(),

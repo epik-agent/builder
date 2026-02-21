@@ -2,6 +2,7 @@ import { act, render } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import type { GraphData, NodeObject, LinkObject } from 'react-force-graph-2d'
 import IssueGraph from './IssueGraph'
+import { makeEvents } from './test-fixtures'
 import type { AgentEvent, AgentId, IssueGraph as IssueGraphType } from './types'
 
 // ---------------------------------------------------------------------------
@@ -46,12 +47,7 @@ const sampleGraph: IssueGraphType = {
   ],
 }
 
-const noEvents: Record<AgentId, AgentEvent[]> = {
-  supervisor: [],
-  'worker-0': [],
-  'worker-1': [],
-  'worker-2': [],
-}
+const noEvents = makeEvents()
 
 // ---------------------------------------------------------------------------
 // Tests

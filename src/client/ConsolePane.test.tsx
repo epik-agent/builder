@@ -3,10 +3,10 @@ import { describe, expect, it, vi } from 'vitest'
 import userEvent from '@testing-library/user-event'
 import ConsolePane, { ToolUseCard, ToolResultCard } from './ConsolePane'
 import { themes } from './theme'
+import { noop } from './test-fixtures'
 import type { AgentEvent, AgentId } from './types'
 
 const agentId: AgentId = 'worker-0'
-const noop = () => {}
 const palette = themes['dark']
 
 describe('ConsolePane', () => {

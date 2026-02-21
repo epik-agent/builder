@@ -1,67 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { AgentEvent } from '../client/types.ts'
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Build a minimal async iterable from an array of SDK message objects. */
-function makeIterator(messages: unknown[]): AsyncIterable<unknown> & { interrupt?: () => void } {
-  let interrupted = false
-  return {
-    [Symbol.asyncIterator]() {
-      let i = 0
-      return {
-        async next() {
-          if (interrupted || i >= messages.length) return { value: undefined, done: true }
-          return { value: messages[i++], done: false }
-        },
-      }
-    },
-    interrupt() {
-      interrupted = true
-    },
-  }
-}
-
-/** No-op mock for createSdkMcpServer and tool used in all vi.doMock calls. */
-const sdkMockBase: Record<string, (...args: unknown[]) => unknown> = {
-  createSdkMcpServer: () => ({ type: 'sdk', name: 'nats', instance: {} }),
-  tool: () => ({}),
-}
-
-/** Collect all events sent via the `send` callback into an array. */
-async function collect(
-  messages: unknown[],
-  natsPublish?: (topic: string, message: string) => void,
-): Promise<AgentEvent[]> {
-  const { runAgent } = await import('../server/runner.ts')
-
-  const events: AgentEvent[] = []
-  const mockNatsClient = {
-    publish: vi.fn((topic: string, data: unknown) => {
-      const text = typeof data === 'string' ? data : new TextDecoder().decode(data as Uint8Array)
-      natsPublish?.(topic, text)
-    }),
-  }
-
-  // Mock the claude-agent-sdk query function
-  vi.doMock('@anthropic-ai/claude-agent-sdk', () => ({
-    ...sdkMockBase,
-    query: () => makeIterator(messages),
-  }))
-
-  await runAgent({
-    config: { model: 'claude-sonnet-4-6', cwd: '/tmp', systemPrompt: undefined },
-    sessionId: undefined,
-    prompt: 'test prompt',
-    send: (e) => events.push(e),
-    onSessionId: () => {},
-    natsClient: mockNatsClient as unknown as import('nats').NatsConnection,
-  })
-
-  return events
-}
+import { collect, makeIterator, makeRunAgentOpts, sdkMockBase } from './test-fixtures.ts'
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -164,14 +103,7 @@ describe('runAgent', () => {
     }))
 
     const sessionIds: string[] = []
-    await runAgent({
-      config: { model: 'claude-sonnet-4-6', cwd: '/tmp', systemPrompt: undefined },
-      sessionId: undefined,
-      prompt: 'test',
-      send: () => {},
-      onSessionId: (id) => sessionIds.push(id),
-      natsClient: { publish: vi.fn() } as unknown as import('nats').NatsConnection,
-    })
+    await runAgent(makeRunAgentOpts({ onSessionId: (id) => sessionIds.push(id) }))
 
     expect(sessionIds).toEqual(['sess-abc-123'])
   })
@@ -219,7 +151,6 @@ describe('nats_publish interception', () => {
       }),
     }
 
-    // Simulate: assistant emits nats_publish tool_use, then user provides tool_result
     const messages = [
       {
         type: 'assistant',
@@ -242,16 +173,13 @@ describe('nats_publish interception', () => {
     }))
 
     const events: AgentEvent[] = []
-    await runAgent({
-      config: { model: 'claude-sonnet-4-6', cwd: '/tmp', systemPrompt: undefined },
-      sessionId: undefined,
-      prompt: 'test',
-      send: (e) => events.push(e),
-      onSessionId: () => {},
-      natsClient: mockNatsClient as unknown as import('nats').NatsConnection,
-    })
+    await runAgent(
+      makeRunAgentOpts({
+        send: (e) => events.push(e),
+        natsClient: mockNatsClient as unknown as import('nats').NatsConnection,
+      }),
+    )
 
-    // nc.publish should have been called with the right topic and message
     expect(natsPublishCalls).toHaveLength(1)
     expect(natsPublishCalls[0].topic).toBe('epik.supervisor')
     expect(natsPublishCalls[0].data).toBe('hello supervisor')
@@ -282,14 +210,7 @@ describe('nats_publish interception', () => {
     }))
 
     const events: AgentEvent[] = []
-    await runAgent({
-      config: { model: 'claude-sonnet-4-6', cwd: '/tmp', systemPrompt: undefined },
-      sessionId: undefined,
-      prompt: 'test',
-      send: (e) => events.push(e),
-      onSessionId: () => {},
-      natsClient: { publish: vi.fn() } as unknown as import('nats').NatsConnection,
-    })
+    await runAgent(makeRunAgentOpts({ send: (e) => events.push(e) }))
 
     const toolUseEvents = events.filter((e) => e.kind === 'tool_use')
     expect(toolUseEvents).toHaveLength(0)
@@ -321,14 +242,7 @@ describe('nats_publish interception', () => {
     }))
 
     const events: AgentEvent[] = []
-    await runAgent({
-      config: { model: 'claude-sonnet-4-6', cwd: '/tmp', systemPrompt: undefined },
-      sessionId: undefined,
-      prompt: 'test',
-      send: (e) => events.push(e),
-      onSessionId: () => {},
-      natsClient: { publish: vi.fn() } as unknown as import('nats').NatsConnection,
-    })
+    await runAgent(makeRunAgentOpts({ send: (e) => events.push(e) }))
 
     const toolUseEvents = events.filter((e) => e.kind === 'tool_use')
     expect(toolUseEvents).toHaveLength(1)
@@ -347,14 +261,7 @@ describe('nats_publish interception', () => {
       },
     }))
 
-    await runAgent({
-      config: { model: 'claude-sonnet-4-6', cwd: '/tmp', systemPrompt: undefined },
-      sessionId: undefined,
-      prompt: 'test',
-      send: () => {},
-      onSessionId: () => {},
-      natsClient: { publish: vi.fn() } as unknown as import('nats').NatsConnection,
-    })
+    await runAgent(makeRunAgentOpts())
 
     const opts = capturedOptions as { options?: { mcpServers?: Record<string, unknown> } }
     expect(opts?.options?.mcpServers?.['nats']).toBeDefined()
@@ -372,14 +279,11 @@ describe('nats_publish interception', () => {
       },
     }))
 
-    await runAgent({
-      config: { model: 'claude-sonnet-4-6', cwd: '/tmp', systemPrompt: 'You are a test agent.' },
-      sessionId: undefined,
-      prompt: 'test',
-      send: () => {},
-      onSessionId: () => {},
-      natsClient: { publish: vi.fn() } as unknown as import('nats').NatsConnection,
-    })
+    await runAgent(
+      makeRunAgentOpts({
+        config: { model: 'claude-sonnet-4-6', cwd: '/tmp', systemPrompt: 'You are a test agent.' },
+      }),
+    )
 
     const opts = capturedOptions as { options?: { systemPrompt?: string } }
     expect(opts?.options?.systemPrompt).toBe('You are a test agent.')
@@ -397,14 +301,7 @@ describe('nats_publish interception', () => {
       },
     }))
 
-    await runAgent({
-      config: { model: 'claude-sonnet-4-6', cwd: '/tmp', systemPrompt: undefined },
-      sessionId: 'existing-session-id',
-      prompt: 'test',
-      send: () => {},
-      onSessionId: () => {},
-      natsClient: { publish: vi.fn() } as unknown as import('nats').NatsConnection,
-    })
+    await runAgent(makeRunAgentOpts({ sessionId: 'existing-session-id' }))
 
     const opts = capturedOptions as { options?: { resume?: string } }
     expect(opts?.options?.resume).toBe('existing-session-id')
@@ -419,25 +316,15 @@ describe('nats_publish interception', () => {
     }))
 
     const interruptFns: Array<() => void> = []
-    await runAgent({
-      config: { model: 'claude-sonnet-4-6', cwd: '/tmp', systemPrompt: undefined },
-      sessionId: undefined,
-      prompt: 'test',
-      send: () => {},
-      onSessionId: () => {},
-      natsClient: { publish: vi.fn() } as unknown as import('nats').NatsConnection,
-      onInterruptReady: (fn) => interruptFns.push(fn),
-    })
+    await runAgent(makeRunAgentOpts({ onInterruptReady: (fn) => interruptFns.push(fn) }))
 
     expect(interruptFns).toHaveLength(1)
-    // Calling the interrupt fn should not throw
     expect(() => interruptFns[0]()).not.toThrow()
   })
 
   it('does not throw when result message has is_error=false', async () => {
     const messages = [{ type: 'result', subtype: 'success', is_error: false }]
     const events = await collect(messages)
-    // Only turn_end should be emitted, no error
     expect(events).toEqual([{ kind: 'turn_end' }])
   })
 
@@ -475,17 +362,9 @@ describe('nats_publish interception', () => {
       query: () => makeIterator([]),
     }))
 
-    const result = await runAgent({
-      config: { model: 'claude-sonnet-4-6', cwd: '/tmp', systemPrompt: undefined },
-      sessionId: undefined,
-      prompt: 'test',
-      send: () => {},
-      onSessionId: () => {},
-      natsClient: { publish: vi.fn() } as unknown as import('nats').NatsConnection,
-    })
+    const result = await runAgent(makeRunAgentOpts())
 
     expect(result.interrupt).toBeDefined()
-    // Calling the returned interrupt should not throw
     expect(() => result.interrupt?.()).not.toThrow()
   })
 
@@ -501,25 +380,14 @@ describe('nats_publish interception', () => {
       },
     }))
 
-    // Mock child_process.execSync to return a fake token
     vi.doMock('child_process', () => ({
       execSync: vi.fn(() => 'gh-fake-token-abc123\n'),
     }))
 
-    await runAgent({
-      config: { model: 'claude-sonnet-4-6', cwd: '/tmp', systemPrompt: undefined },
-      sessionId: undefined,
-      prompt: 'test',
-      send: () => {},
-      onSessionId: () => {},
-      natsClient: { publish: vi.fn() } as unknown as import('nats').NatsConnection,
-    })
+    await runAgent(makeRunAgentOpts())
 
     const opts = capturedOptions as { options?: { mcpServers?: Record<string, unknown> } }
-    // When a token is available, the github MCP server should be included
     expect(opts?.options?.mcpServers).toHaveProperty('nats')
-    // The github key may or may not be present depending on module resolution order,
-    // but the call should not throw
     expect(opts?.options?.mcpServers).toBeDefined()
   })
 })
