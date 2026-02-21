@@ -205,6 +205,24 @@ describe('App', () => {
     })
   })
 
+  it('renders no hardcoded chrome hex values anywhere in the DOM', () => {
+    // These are the original hardcoded near-black values that were replaced with
+    // theme palette references. Any recurrence in any child component is a regression.
+    const forbidden = [
+      '#111827', // old root/input bg
+      '#1f2937', // old toolbar/tab-strip bg
+      '#374151', // old border / secondary button bg
+      '#3b82f6', // old active-tab underline / start button bg
+      '#9ca3af', // old inactive tab text
+      '#f9fafb', // old primary text (replaced by palette.text.primary)
+    ]
+    const { container } = render(<App />)
+    const html = container.innerHTML
+    for (const hex of forbidden) {
+      expect(html, `found hardcoded ${hex} in rendered DOM`).not.toContain(hex)
+    }
+  })
+
   it('unmounts cleanly when fetch rejects after unmount (cancelled flag suppresses setGraph)', async () => {
     // Make fetch reject after a delay
     let rejectFetch!: (err: Error) => void
