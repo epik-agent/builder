@@ -13,7 +13,6 @@
     "lint": "tsc --noEmit && eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "docker": "GH_TOKEN=$(gh auth token) docker compose up --build",
     "preview": "vite preview",
     "test": "vitest run"
   },
