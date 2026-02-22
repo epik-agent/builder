@@ -96,9 +96,9 @@ function parseType(labels: Array<{ name: string }>): IssueNode['type'] {
  * Exported so tests can spy on it or inject a replacement via the `exec`
  * parameter of the public API functions.
  */
-export function runGhCommand(args: string[]): Promise<string> {
+export function runGhCommand(args: string[], bin = 'gh'): Promise<string> {
   return new Promise((resolve, reject) => {
-    execFile('gh', args, { maxBuffer: 10 * 1024 * 1024 }, (err, stdout) => {
+    execFile(bin, args, { maxBuffer: 10 * 1024 * 1024 }, (err, stdout) => {
       if (err) {
         reject(err)
       } else {
