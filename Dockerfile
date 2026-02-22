@@ -8,10 +8,9 @@ WORKDIR /app
 # Copy package files first for layer-caching
 COPY package.json package-lock.json .npmrc ./
 
-# PACKAGES_TOKEN is needed to pull @epik-agent scoped packages from GitHub Packages
-ARG PACKAGES_TOKEN
+ARG NODE_AUTH_TOKEN
 
-RUN PACKAGES_TOKEN=${PACKAGES_TOKEN} npm ci
+RUN NODE_AUTH_TOKEN=${NODE_AUTH_TOKEN} npm ci
 
 # Copy source and config
 COPY . .
@@ -40,9 +39,9 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy package files and install production dependencies only
-ARG PACKAGES_TOKEN
+ARG NODE_AUTH_TOKEN
 COPY package.json package-lock.json .npmrc ./
-RUN PACKAGES_TOKEN=${PACKAGES_TOKEN} npm ci --omit=dev
+RUN NODE_AUTH_TOKEN=${NODE_AUTH_TOKEN} npm ci --omit=dev
 
 # Copy compiled artifacts from builder stage (frontend + bundled server)
 COPY --from=builder /app/dist ./dist

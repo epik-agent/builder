@@ -25,7 +25,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
         env:
-          PACKAGES_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
 
       - name: Commit updated lockfile
         run: |
