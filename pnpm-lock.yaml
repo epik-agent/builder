@@ -11,6 +11,9 @@ importers:
       '@anthropic-ai/claude-agent-sdk':
         specifier: ^0.2.49
         version: 0.2.50(zod@4.3.6)
+      '@epik-agent/brand':
+        specifier: ^3.0.0
+        version: 3.0.0
       '@types/supertest':
         specifier: ^6.0.3
         version: 6.0.3
@@ -47,6 +50,9 @@ importers:
       ws:
         specifier: ^8.19.0
         version: 8.19.0
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
     devDependencies:
       '@eslint/js':
         specifier: ^9.39.1
@@ -272,6 +278,9 @@ packages:
   '@csstools/css-tokenizer@4.0.0':
     resolution: {integrity: sha512-QxULHAm7cNu72w97JUNCBFODFaXpbDg+dP8b/oWFAZ2MTRppA3U00Y2L1HqaS4J6yBqxwa/Y3nMBaxVKbB/NsA==}
     engines: {node: '>=20.19.0'}
+
+  '@epik-agent/brand@3.0.0':
+    resolution: {integrity: sha512-/pEv+oEfu5rKh8z0Xh6XTPd0d/y3hqrLu8k8HzCx5SSSuXSuU5597Eot+X2J2oUx10MywanGjTX5DSSz2AHOqA==, tarball: https://npm.pkg.github.com/download/@epik-agent/brand/3.0.0/70d04aaf1e1f7596794f9d2acec04cfdd8fe9493}
 
   '@esbuild/aix-ppc64@0.27.3':
     resolution: {integrity: sha512-9fJMTNFTWZMh5qwrBItuziu834eOCUcEqymSH7pY+zoMVEZg3gcPuBNxH1EvfVYe9h0x/Ptw8KBzv7qxb7l8dg==}
@@ -2845,6 +2854,8 @@ snapshots:
   '@csstools/css-syntax-patches-for-csstree@1.0.28': {}
 
   '@csstools/css-tokenizer@4.0.0': {}
+
+  '@epik-agent/brand@3.0.0': {}
 
   '@esbuild/aix-ppc64@0.27.3':
     optional: true

@@ -6,9 +6,11 @@ FROM node:20-slim AS builder
 WORKDIR /app
 
 # Copy package files first for layer-caching
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json .npmrc ./
 
-RUN npm ci
+ARG NODE_AUTH_TOKEN
+
+RUN NODE_AUTH_TOKEN=${NODE_AUTH_TOKEN} npm ci
 
 # Copy source and config
 COPY . .
@@ -37,8 +39,9 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy package files and install production dependencies only
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+ARG NODE_AUTH_TOKEN
+COPY package.json package-lock.json .npmrc ./
+RUN NODE_AUTH_TOKEN=${NODE_AUTH_TOKEN} npm ci --omit=dev
 
 # Copy compiled artifacts from builder stage (frontend + bundled server)
 COPY --from=builder /app/dist ./dist
