@@ -315,12 +315,10 @@ describe('github', () => {
     })
 
     it('resolves with stdout when the command succeeds', async () => {
-      // Use a real command that gh wraps — `gh --version` outputs to stdout
-      // `gh version` or `gh --version` should be available in the CI/dev environment.
-      // If gh is not installed this test will fail — that's acceptable as a hard dependency.
-      const output = await runGhCommand(['--version'])
-      expect(typeof output).toBe('string')
-      expect(output.length).toBeGreaterThan(0)
+      // Use node (always on PATH) as the binary to exercise the success path
+      // without requiring gh to be installed.
+      const output = await runGhCommand(['--version'], 'node')
+      expect(output.trim()).toMatch(/^v\d+/)
     })
   })
 })
