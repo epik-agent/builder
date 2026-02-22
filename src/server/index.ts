@@ -5,10 +5,9 @@
  * endpoint that streams {@link ServerMessage} envelopes to all connected
  * browsers.
  *
- * In production (Docker) the server also serves the Vite-built frontend
- * from the `dist/` directory at the project root. In development, Vite's
- * own dev server handles the frontend at `:5173` while this server runs at
- * `:3001`.
+ * In production the server serves the Vite-built frontend from the `dist/`
+ * directory at the project root. In development, Vite's own dev server
+ * handles the frontend at `:5173` while this server runs at `:3001`.
  *
  * The HTTP port is read from the `PORT` environment variable, defaulting to
  * `3001` for local development compatibility.
@@ -30,20 +29,18 @@ export const app = express()
 app.use(express.json())
 
 // ---------------------------------------------------------------------------
-// Static file serving (production / Docker)
+// Static file serving (production)
 //
 // When the Vite frontend has been built (`npm run build`), the compiled assets
-// land in `dist/` at the project root. We serve them here so a single Docker
-// container hosts both the API and the UI.
+// land in `dist/` at the project root. We serve them here so a single server
+// process hosts both the API and the UI.
 //
-// In local development this block is a no-op: `dist/` does not exist and the
-// Vite dev server handles the frontend separately.
+// In local development `dist/` does not exist and the Vite dev server handles
+// the frontend separately, so this is effectively a no-op.
 // ---------------------------------------------------------------------------
 
-if (process.env['SERVE_STATIC']) {
-  const distDir = resolve(fileURLToPath(import.meta.url), '..')
-  app.use(express.static(distDir))
-}
+const distDir = resolve(fileURLToPath(import.meta.url), '..')
+app.use(express.static(distDir))
 
 export const server = createServer(app)
 /** WebSocket server mounted at `/ws` on the same HTTP server as the REST API. */
