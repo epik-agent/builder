@@ -177,7 +177,10 @@ describe('nats module (unit)', () => {
 
   it('SIGINT handler closes the connection and calls process.exit', async () => {
     const mockConn = makeMockConn()
-    const { getNatsConnection } = await makeNatsModule(vi.fn(async () => mockConn))
+    const { getNatsConnection, registerShutdownHandler } = await makeNatsModule(
+      vi.fn(async () => mockConn),
+    )
+    registerShutdownHandler()
     await getNatsConnection()
 
     // Spy on process.exit to prevent the test process from actually exiting.

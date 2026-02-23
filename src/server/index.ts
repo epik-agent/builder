@@ -22,7 +22,7 @@ import { resolve } from 'path'
 import { fileURLToPath } from 'url'
 import type { AgentId, ServerMessage } from '../client/types.ts'
 import { createAgentPool } from './agentPool.ts'
-import { getNatsConnection, TOPIC_SUPERVISOR } from './nats.ts'
+import { getNatsConnection, registerShutdownHandler, TOPIC_SUPERVISOR } from './nats.ts'
 import { loadIssueGraph } from './github.ts'
 
 export const app = express()
@@ -201,6 +201,7 @@ wss.on('connection', async (ws) => {
 
 /* v8 ignore start */
 if (process.argv[1] === new URL(import.meta.url).pathname) {
+  registerShutdownHandler()
   const PORT = parseInt(process.env['PORT'] ?? '3001', 10)
   server.listen(PORT, () => {
     console.log(`Server listening on port ${PORT}`)
