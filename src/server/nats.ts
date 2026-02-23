@@ -57,7 +57,17 @@ export async function closeNatsConnection(): Promise<void> {
   }
 }
 
-process.on('SIGINT', async () => {
-  await closeNatsConnection()
-  process.exit(0)
-})
+/**
+ * Registers a SIGINT handler that drains the NATS connection before the
+ * process exits, ensuring in-flight messages are not dropped.
+ *
+ * Call this once at server startup. It is intentionally not called at module
+ * load time so that test suites that repeatedly re-import this module do not
+ * accumulate duplicate listeners.
+ */
+export function registerShutdownHandler(): void {
+  process.on('SIGINT', async () => {
+    await closeNatsConnection()
+    process.exit(0)
+  })
+}
