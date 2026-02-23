@@ -2,7 +2,32 @@ import { execSync } from 'child_process'
 import { existsSync } from 'fs'
 import { join } from 'path'
 import type { NatsConnection } from 'nats'
+import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk'
 import type { AgentEvent, AgentConfig } from '../client/types.ts'
+
+function isNatsPublishInput(v: unknown): v is { topic: string; message: string } {
+  return (
+    typeof v === 'object' &&
+    v !== null &&
+    typeof (v as Record<string, unknown>)['topic'] === 'string' &&
+    typeof (v as Record<string, unknown>)['message'] === 'string'
+  )
+}
+
+function isTextBlock(v: unknown): v is { type: 'text'; text: string } {
+  return (
+    typeof v === 'object' &&
+    v !== null &&
+    (v as Record<string, unknown>)['type'] === 'text' &&
+    typeof (v as Record<string, unknown>)['text'] === 'string'
+  )
+}
+
+function isToolResultBlock(v: unknown): v is { type: 'tool_result'; content: unknown } {
+  return (
+    typeof v === 'object' && v !== null && (v as Record<string, unknown>)['type'] === 'tool_result'
+  )
+}
 
 /** Retrieves the active GitHub OAuth token, or `undefined` if unavailable.
  *
@@ -115,7 +140,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<{ interrupt?: () 
     })
   }
 
-  for await (const msg of messages) {
+  for await (const msg of messages as AsyncIterable<SDKMessage>) {
     if (msg.type === 'system' && msg.subtype === 'init') {
       opts.onSessionId(msg.session_id)
       continue
@@ -134,8 +159,8 @@ export async function runAgent(opts: RunAgentOptions): Promise<{ interrupt?: () 
         if (block.type === 'tool_use') {
           if (block.name === 'nats_publish') {
             // Intercept: publish via NATS, do not forward to Claude Code's tool dispatcher
-            const input = block.input as { topic: string; message: string }
-            opts.natsClient.publish(input.topic, input.message)
+            if (!isNatsPublishInput(block.input)) continue
+            opts.natsClient.publish(block.input.topic, block.input.message)
           } else {
             opts.send({ kind: 'tool_use', name: block.name, input: block.input })
           }
@@ -146,24 +171,12 @@ export async function runAgent(opts: RunAgentOptions): Promise<{ interrupt?: () 
 
     if (msg.type === 'user') {
       for (const block of msg.message.content) {
-        if (
-          typeof block === 'object' &&
-          block !== null &&
-          'type' in block &&
-          (block as { type: string }).type === 'text' &&
-          typeof (block as { text?: unknown }).text === 'string' &&
-          (block as { text: string }).text.includes('<parameter name="summary">')
-        ) {
-          opts.send({ kind: 'compaction', summary: (block as { text: string }).text })
+        if (isTextBlock(block) && block.text.includes('<parameter name="summary">')) {
+          opts.send({ kind: 'compaction', summary: block.text })
           continue
         }
-        if (
-          typeof block === 'object' &&
-          block !== null &&
-          'type' in block &&
-          (block as { type: string }).type === 'tool_result'
-        ) {
-          opts.send({ kind: 'tool_result', content: (block as { content: unknown }).content })
+        if (isToolResultBlock(block)) {
+          opts.send({ kind: 'tool_result', content: block.content })
         }
       }
       continue
@@ -172,7 +185,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<{ interrupt?: () 
     if (msg.type === 'result' && msg.subtype !== 'success' && msg.is_error) {
       opts.send({
         kind: 'error',
-        message: (msg as { errors?: string[] }).errors?.join('\n') ?? 'Unknown error',
+        message: msg.errors?.join('\n') || 'Unknown error',
       })
     }
   }
