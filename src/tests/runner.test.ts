@@ -302,3 +302,74 @@ describe('nats_publish interception', () => {
     expect(opts?.options?.mcpServers).toHaveProperty('nats')
   })
 })
+
+// ---------------------------------------------------------------------------
+// Type guard malformed input handling
+// ---------------------------------------------------------------------------
+
+describe('type guard malformed input handling', () => {
+  beforeEach(() => {
+    vi.resetModules()
+  })
+
+  it('skips nats_publish when input is missing topic field', async () => {
+    const publishCalls: unknown[] = []
+    const messages = [
+      {
+        type: 'assistant',
+        message: {
+          content: [
+            { type: 'tool_use', name: 'nats_publish', input: { message: 'hello' } },
+          ],
+        },
+      },
+    ]
+    await collect({ messages, onPublish: (t, m) => publishCalls.push({ t, m }) })
+    expect(publishCalls).toHaveLength(0)
+  })
+
+  it('skips nats_publish when input message field is not a string', async () => {
+    const publishCalls: unknown[] = []
+    const messages = [
+      {
+        type: 'assistant',
+        message: {
+          content: [
+            { type: 'tool_use', name: 'nats_publish', input: { topic: 'epik.test', message: 42 } },
+          ],
+        },
+      },
+    ]
+    await collect({ messages, onPublish: (t, m) => publishCalls.push({ t, m }) })
+    expect(publishCalls).toHaveLength(0)
+  })
+
+  it('ignores user text block missing text property', async () => {
+    const messages = [
+      {
+        type: 'user',
+        message: {
+          content: [
+            { type: 'text', summary: '<parameter name="summary">no text key</parameter>' },
+          ],
+        },
+      },
+    ]
+    const { events } = await collect({ messages })
+    expect(events.filter((e) => e.kind === 'compaction')).toHaveLength(0)
+    expect(events).toContainEqual({ kind: 'turn_end' })
+  })
+
+  it('emits tool_result for tool_result block even when content is unusual', async () => {
+    const messages = [
+      {
+        type: 'user',
+        message: {
+          content: [{ type: 'tool_result', content: { nested: 'object' } }],
+        },
+      },
+    ]
+    const { events } = await collect({ messages })
+    expect(events).toContainEqual({ kind: 'tool_result', content: { nested: 'object' } })
+  })
+})
