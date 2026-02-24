@@ -219,7 +219,7 @@ export default function IssueGraph({ graph, events, agentIssueMap, repo }: Issue
         nodeLabel="label"
         nodeColor={nodeColor}
         nodeCanvasObject={nodeCanvasObject}
-        nodeCanvasObjectMode="replace"
+        nodeCanvasObjectMode={() => 'replace'}
         nodePointerAreaPaint={nodePointerAreaPaint}
         onNodeClick={onNodeClick}
         width={dimensions.width}
