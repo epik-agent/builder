@@ -1,4 +1,4 @@
-name: Publish NATS image
+name: Publish NATS Image
 
 on:
   push:
