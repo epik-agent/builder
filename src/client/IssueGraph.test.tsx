@@ -12,6 +12,16 @@ import type { AgentEvent, AgentId, IssueGraph as IssueGraphType } from './types'
 let capturedGraphData: GraphData | null = null
 let capturedNodeColorFn: ((node: NodeObject) => string) | null = null
 let capturedLinkColorFn: ((link: LinkObject) => string) | null = null
+let capturedNodeCanvasObjectFn:
+  | ((node: NodeObject, ctx: CanvasRenderingContext2D, scale: number) => void)
+  | null = null
+let capturedNodePointerAreaPaintFn:
+  | ((node: NodeObject, color: string, ctx: CanvasRenderingContext2D) => void)
+  | null = null
+let capturedNodeCanvasObjectMode: string | null = null
+let capturedOnNodeClickFn: ((node: NodeObject, event: MouseEvent) => void) | null = null
+let capturedWidth: number | undefined = undefined
+let capturedHeight: number | undefined = undefined
 
 vi.mock('react-force-graph-2d', () => ({
   default: vi.fn(
@@ -19,10 +29,26 @@ vi.mock('react-force-graph-2d', () => ({
       graphData?: GraphData
       nodeColor?: (node: NodeObject) => string
       linkColor?: (link: LinkObject) => string
+      nodeCanvasObject?: (node: NodeObject, ctx: CanvasRenderingContext2D, scale: number) => void
+      nodePointerAreaPaint?: (
+        node: NodeObject,
+        color: string,
+        ctx: CanvasRenderingContext2D,
+      ) => void
+      nodeCanvasObjectMode?: string
+      onNodeClick?: (node: NodeObject, event: MouseEvent) => void
+      width?: number
+      height?: number
     }) => {
       capturedGraphData = props.graphData ?? null
       capturedNodeColorFn = props.nodeColor ?? null
       capturedLinkColorFn = props.linkColor ?? null
+      capturedNodeCanvasObjectFn = props.nodeCanvasObject ?? null
+      capturedNodePointerAreaPaintFn = props.nodePointerAreaPaint ?? null
+      capturedNodeCanvasObjectMode = props.nodeCanvasObjectMode ?? null
+      capturedOnNodeClickFn = props.onNodeClick ?? null
+      capturedWidth = props.width
+      capturedHeight = props.height
       return null
     },
   ),
@@ -70,6 +96,12 @@ describe('IssueGraph', () => {
     capturedGraphData = null
     capturedNodeColorFn = null
     capturedLinkColorFn = null
+    capturedNodeCanvasObjectFn = null
+    capturedNodePointerAreaPaintFn = null
+    capturedNodeCanvasObjectMode = null
+    capturedOnNodeClickFn = null
+    capturedWidth = undefined
+    capturedHeight = undefined
   })
 
   afterEach(() => {
@@ -356,5 +388,116 @@ describe('IssueGraph', () => {
     expect(capturedNodeColorFn!(node1)).toBe('#00e599')
 
     vi.useRealTimers()
+  })
+
+  // ── Custom node rendering ─────────────────────────────────────────────────
+
+  it('passes nodeCanvasObjectMode="replace" to ForceGraph', () => {
+    render(<IssueGraph graph={sampleGraph} events={noEvents} />)
+    expect(capturedNodeCanvasObjectMode).toBe('replace')
+  })
+
+  it('passes a nodeCanvasObject function to ForceGraph', () => {
+    render(<IssueGraph graph={sampleGraph} events={noEvents} />)
+    expect(typeof capturedNodeCanvasObjectFn).toBe('function')
+  })
+
+  it('passes a nodePointerAreaPaint function to ForceGraph', () => {
+    render(<IssueGraph graph={sampleGraph} events={noEvents} />)
+    expect(typeof capturedNodePointerAreaPaintFn).toBe('function')
+  })
+
+  it('nodeCanvasObject draws without throwing for an open node', () => {
+    render(<IssueGraph graph={sampleGraph} events={noEvents} />)
+    expect(capturedNodeCanvasObjectFn).not.toBeNull()
+
+    const openNode = capturedGraphData!.nodes.find((n) => n.id === 1)!
+    const ctx = {
+      save: vi.fn(),
+      restore: vi.fn(),
+      beginPath: vi.fn(),
+      roundRect: vi.fn(),
+      fill: vi.fn(),
+      stroke: vi.fn(),
+      fillText: vi.fn(),
+      fillStyle: '',
+      strokeStyle: '',
+      lineWidth: 0,
+      font: '',
+      textAlign: '',
+      textBaseline: '',
+    } as unknown as CanvasRenderingContext2D
+
+    expect(() => capturedNodeCanvasObjectFn!(openNode, ctx, 1)).not.toThrow()
+    expect(ctx.fill).toHaveBeenCalled()
+    expect(ctx.stroke).toHaveBeenCalled()
+  })
+
+  it('nodeCanvasObject draws without throwing for a closed node', () => {
+    render(<IssueGraph graph={sampleGraph} events={noEvents} />)
+    expect(capturedNodeCanvasObjectFn).not.toBeNull()
+
+    const closedNode = capturedGraphData!.nodes.find((n) => n.id === 3)!
+    const ctx = {
+      save: vi.fn(),
+      restore: vi.fn(),
+      beginPath: vi.fn(),
+      roundRect: vi.fn(),
+      fill: vi.fn(),
+      stroke: vi.fn(),
+      fillText: vi.fn(),
+      fillStyle: '',
+      strokeStyle: '',
+      lineWidth: 0,
+      font: '',
+      textAlign: '',
+      textBaseline: '',
+    } as unknown as CanvasRenderingContext2D
+
+    expect(() => capturedNodeCanvasObjectFn!(closedNode, ctx, 1)).not.toThrow()
+    expect(ctx.fill).toHaveBeenCalled()
+  })
+
+  // ── Sizing ────────────────────────────────────────────────────────────────
+
+  it('passes numeric width and height props to ForceGraph', () => {
+    render(<IssueGraph graph={sampleGraph} events={noEvents} />)
+    expect(typeof capturedWidth).toBe('number')
+    expect(typeof capturedHeight).toBe('number')
+  })
+
+  // ── GitHub link ───────────────────────────────────────────────────────────
+
+  it('passes onNodeClick to ForceGraph', () => {
+    render(<IssueGraph graph={sampleGraph} events={noEvents} />)
+    expect(typeof capturedOnNodeClickFn).toBe('function')
+  })
+
+  it('onNodeClick opens GitHub issue URL in a new tab', () => {
+    const openSpy = vi.fn()
+    vi.stubGlobal('open', openSpy)
+
+    render(<IssueGraph graph={sampleGraph} events={noEvents} repo="owner/repo" />)
+
+    const node1 = capturedGraphData!.nodes.find((n) => n.id === 1)!
+    capturedOnNodeClickFn!(node1, new MouseEvent('click'))
+
+    expect(openSpy).toHaveBeenCalledWith('https://github.com/owner/repo/issues/1', '_blank')
+
+    vi.unstubAllGlobals()
+  })
+
+  it('onNodeClick does nothing when repo is not provided', () => {
+    const openSpy = vi.fn()
+    vi.stubGlobal('open', openSpy)
+
+    render(<IssueGraph graph={sampleGraph} events={noEvents} />)
+
+    const node1 = capturedGraphData!.nodes.find((n) => n.id === 1)!
+    capturedOnNodeClickFn!(node1, new MouseEvent('click'))
+
+    expect(openSpy).not.toHaveBeenCalled()
+
+    vi.unstubAllGlobals()
   })
 })

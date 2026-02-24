@@ -32,13 +32,14 @@ interface IssueGraphProps {
   graph: IssueGraphType
   events: Record<AgentId, AgentEvent[]>
   agentIssueMap?: Partial<Record<AgentId, number>>
+  repo?: string
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export default function IssueGraph({ graph, events, agentIssueMap }: IssueGraphProps) {
+export default function IssueGraph({ graph, events, agentIssueMap, repo }: IssueGraphProps) {
   const [blinkingIssues, setBlinkingIssues] = useState<Set<number>>(new Set())
   const prevEventCountsRef = useRef<Partial<Record<AgentId, number>>>({})
   const blinkTimers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map())
@@ -101,6 +102,20 @@ export default function IssueGraph({ graph, events, agentIssueMap }: IssueGraphP
     }
   }, [])
 
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const observer = new ResizeObserver((entries) => {
+      const { width, height } = entries[0].contentRect
+      setDimensions({ width, height })
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
   const hasNodes = graph.nodes.length > 0
 
   const nodes: IssueNode[] = graph.nodes.map((n) => ({
@@ -117,6 +132,53 @@ export default function IssueGraph({ graph, events, agentIssueMap }: IssueGraphP
     const issueNode = node as IssueNode
     if (blinkingIssues.has(issueNode.id as number)) return COLOR_BLINK
     return issueNode.state === 'closed' ? COLOR_CLOSED : COLOR_OPEN
+  }
+
+  const nodeCanvasObject = (
+    node: NodeObject,
+    ctx: CanvasRenderingContext2D,
+    globalScale: number,
+  ): void => {
+    const n = node as IssueNode
+    const W = 120,
+      H = 36,
+      R = 6
+    const x = (n.x ?? 0) - W / 2
+    const y = (n.y ?? 0) - H / 2
+    const color = nodeColor(n)
+    ctx.save()
+    ctx.beginPath()
+    ctx.roundRect(x, y, W, H, R)
+    ctx.fillStyle = color + '33'
+    ctx.fill()
+    ctx.strokeStyle = color
+    ctx.lineWidth = 1.5 / globalScale
+    ctx.stroke()
+    ctx.fillStyle = color
+    ctx.font = `bold ${11 / globalScale}px sans-serif`
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(`#${n.id}`, n.x ?? 0, (n.y ?? 0) - 6)
+    const title = n.label.length > 18 ? n.label.slice(0, 17) + '\u2026' : n.label
+    ctx.fillStyle = 'rgba(255,255,255,0.6)'
+    ctx.font = `${9 / globalScale}px sans-serif`
+    ctx.fillText(title, n.x ?? 0, (n.y ?? 0) + 7)
+    ctx.restore()
+  }
+
+  const nodePointerAreaPaint = (
+    node: NodeObject,
+    color: string,
+    ctx: CanvasRenderingContext2D,
+  ): void => {
+    const n = node as IssueNode
+    ctx.fillStyle = color
+    ctx.fillRect((n.x ?? 0) - 60, (n.y ?? 0) - 18, 120, 36)
+  }
+
+  const onNodeClick = (node: NodeObject): void => {
+    if (!repo) return
+    window.open(`https://github.com/${repo}/issues/${(node as IssueNode).id}`, '_blank')
   }
 
   if (!hasNodes) {
@@ -147,13 +209,18 @@ export default function IssueGraph({ graph, events, agentIssueMap }: IssueGraphP
   }
 
   return (
-    <div className="graph-container">
+    <div className="graph-container" ref={containerRef}>
       <ForceGraph2D
         graphData={{ nodes, links }}
         nodeId="id"
         nodeLabel="label"
         nodeColor={nodeColor}
-        nodeRelSize={6}
+        nodeCanvasObject={nodeCanvasObject}
+        nodeCanvasObjectMode="replace"
+        nodePointerAreaPaint={nodePointerAreaPaint}
+        onNodeClick={onNodeClick}
+        width={dimensions.width}
+        height={dimensions.height}
         linkDirectionalArrowLength={6}
         linkDirectionalArrowRelPos={1}
         linkColor={() => palette.dark.graph.link}
