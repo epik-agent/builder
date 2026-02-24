@@ -31,11 +31,11 @@ docker run -d --name epik-nats \
   epik-nats
 ```
 
-| Port | Purpose |
-| ---- | ------- |
-| 4222 | NATS client (TCP) |
+| Port | Purpose                                 |
+| ---- | --------------------------------------- |
+| 4222 | NATS client (TCP)                       |
 | 8222 | HTTP monitoring — http://localhost:8222 |
-| 9222 | WebSocket client |
+| 9222 | WebSocket client                        |
 
 To stop and remove the container:
 
