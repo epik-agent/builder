@@ -2,15 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import ForceGraph2D from 'react-force-graph-2d'
 import type { NodeObject } from 'react-force-graph-2d'
 import { themes as palette } from './theme'
+import type { Theme } from './theme'
 import type { AgentEvent, AgentId, IssueGraph as IssueGraphType } from './types'
 
 // ---------------------------------------------------------------------------
-// Constants (sourced from brand package)
+// Constants
 // ---------------------------------------------------------------------------
 
-const COLOR_CLOSED = palette.dark.graph.closed
-const COLOR_OPEN = palette.dark.graph.open
-const COLOR_BLINK = palette.dark.graph.active
 const BLINK_DURATION_MS = 500
 
 // ---------------------------------------------------------------------------
@@ -28,16 +26,34 @@ interface IssueGraphProps {
   events: Record<AgentId, AgentEvent[]>
   agentIssueMap?: Partial<Record<AgentId, number>>
   repo?: string
+  theme?: Theme
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export default function IssueGraph({ graph, events, agentIssueMap, repo }: IssueGraphProps) {
+// Half the node width — used for nodeRelSize so the library positions arrow tips and
+// computes repulsion forces based on the actual visible node footprint.
+const NODE_RADIUS = 60
+
+export default function IssueGraph({
+  graph,
+  events,
+  agentIssueMap,
+  repo,
+  theme = 'dark',
+}: IssueGraphProps) {
+  const colors = palette[theme].graph
+  const COLOR_CLOSED = colors.closed
+  const COLOR_OPEN = colors.open
+  const COLOR_BLINK = colors.active
+
   const [blinkingIssues, setBlinkingIssues] = useState<Set<number>>(new Set())
   const prevEventCountsRef = useRef<Partial<Record<AgentId, number>>>({})
   const blinkTimers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map())
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const graphRef = useRef<any>(null)
 
   useEffect(() => {
     if (!agentIssueMap) return
@@ -96,6 +112,18 @@ export default function IssueGraph({ graph, events, agentIssueMap, repo }: Issue
       }
     }
   }, [])
+
+  // Configure d3 forces so nodes spread out and arrows land outside the node rectangles.
+  // Must run after mount (graphRef is populated) and re-run when graph data changes.
+  useEffect(() => {
+    const fg = graphRef.current
+    if (!fg) return
+    // Strong repulsion so 120×36px nodes don't overlap
+    fg.d3Force('charge')?.strength(-400)
+    // Minimum link length > 2*NODE_RADIUS + arrowLength so arrowheads are always visible
+    fg.d3Force('link')?.distance(200)
+    fg.d3ReheatSimulation()
+  }, [graph])
 
   const observerRef = useRef<ResizeObserver | null>(null)
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
@@ -207,6 +235,7 @@ export default function IssueGraph({ graph, events, agentIssueMap, repo }: Issue
   return (
     <div className="graph-container" ref={containerRef}>
       <ForceGraph2D
+        ref={graphRef}
         graphData={{ nodes, links }}
         nodeId="id"
         nodeLabel="label"
@@ -219,9 +248,10 @@ export default function IssueGraph({ graph, events, agentIssueMap, repo }: Issue
         height={dimensions.height}
         linkDirectionalArrowLength={6}
         linkDirectionalArrowRelPos={1}
-        linkColor={() => palette.dark.graph.link}
+        linkColor={() => colors.link}
         backgroundColor="transparent"
         autoPauseRedraw={false}
+        nodeRelSize={NODE_RADIUS}
       />
 
       {/* Legend */}

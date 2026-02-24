@@ -285,7 +285,13 @@ export default function App() {
             {graph.warning}
           </div>
         )}
-        <IssueGraph graph={graph} events={events} agentIssueMap={agentIssueMap} repo={repo} />
+        <IssueGraph
+          graph={graph}
+          events={events}
+          agentIssueMap={agentIssueMap}
+          repo={repo}
+          theme={theme}
+        />
       </div>
 
       {/* Bottom 50 %: Agent tabs */}

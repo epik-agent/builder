@@ -22,6 +22,7 @@ let capturedNodeCanvasObjectMode: string | null = null
 let capturedOnNodeClickFn: ((node: NodeObject, event: MouseEvent) => void) | null = null
 let capturedWidth: number | undefined = undefined
 let capturedHeight: number | undefined = undefined
+let capturedNodeRelSize: number | undefined = undefined
 
 vi.mock('react-force-graph-2d', () => ({
   default: vi.fn(
@@ -39,6 +40,7 @@ vi.mock('react-force-graph-2d', () => ({
       onNodeClick?: (node: NodeObject, event: MouseEvent) => void
       width?: number
       height?: number
+      nodeRelSize?: number
     }) => {
       capturedGraphData = props.graphData ?? null
       capturedNodeColorFn = props.nodeColor ?? null
@@ -49,6 +51,7 @@ vi.mock('react-force-graph-2d', () => ({
       capturedOnNodeClickFn = props.onNodeClick ?? null
       capturedWidth = props.width
       capturedHeight = props.height
+      capturedNodeRelSize = props.nodeRelSize
       return null
     },
   ),
@@ -104,6 +107,7 @@ describe('IssueGraph', () => {
     capturedOnNodeClickFn = null
     capturedWidth = undefined
     capturedHeight = undefined
+    capturedNodeRelSize = undefined
   })
 
   afterEach(() => {
@@ -185,6 +189,24 @@ describe('IssueGraph', () => {
     const color = capturedLinkColorFn!({} as LinkObject)
     expect(typeof color).toBe('string')
     expect(color.length).toBeGreaterThan(0)
+  })
+
+  it('uses dark theme link color by default', () => {
+    render(<IssueGraph graph={sampleGraph} events={noEvents} />)
+    const color = capturedLinkColorFn!({} as LinkObject)
+    // Dark theme link color must be visible against a dark background (not near-transparent white)
+    expect(color).not.toBe('rgba(255, 255, 255, 0.10)')
+  })
+
+  it('uses light theme link color when theme="light"', () => {
+    render(<IssueGraph graph={sampleGraph} events={noEvents} theme="light" />)
+    const darkColor = (() => {
+      render(<IssueGraph graph={sampleGraph} events={noEvents} theme="dark" />)
+      return capturedLinkColorFn!({} as LinkObject)
+    })()
+    render(<IssueGraph graph={sampleGraph} events={noEvents} theme="light" />)
+    const lightColor = capturedLinkColorFn!({} as LinkObject)
+    expect(lightColor).not.toBe(darkColor)
   })
 
   it('produces no links for nodes with empty blockedBy', () => {
@@ -458,6 +480,14 @@ describe('IssueGraph', () => {
 
     expect(() => capturedNodeCanvasObjectFn!(closedNode, ctx, 1)).not.toThrow()
     expect(ctx.fill).toHaveBeenCalled()
+  })
+
+  // ── Arrow visibility ──────────────────────────────────────────────────────
+
+  it('passes nodeRelSize >= 60 so arrows are not hidden inside nodes', () => {
+    render(<IssueGraph graph={sampleGraph} events={noEvents} />)
+    expect(capturedNodeRelSize).toBeDefined()
+    expect(capturedNodeRelSize!).toBeGreaterThanOrEqual(60)
   })
 
   // ── Sizing ────────────────────────────────────────────────────────────────
