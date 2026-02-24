@@ -115,6 +115,7 @@ export async function collect({
   const events: AgentEvent[] = []
   const mockNatsClient = {
     publish: vi.fn((topic: string, data: unknown) => {
+      /* v8 ignore next */
       const text = typeof data === 'string' ? data : new TextDecoder().decode(data as Uint8Array)
       onPublish?.(topic, text)
     }),
