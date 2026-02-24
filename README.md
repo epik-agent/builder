@@ -57,19 +57,19 @@ Open http://localhost:5173/?repo=owner/repo.
 
 ### Scripts
 
-| Script                      | Description                                       |
-| --------------------------- | ------------------------------------------------- |
-| `pnpm run dev`              | Vite dev server + Express via tsx (hot reload)    |
-| `pnpm run server`           | Express server only (tsx watch)                   |
-| `pnpm run build`            | Type-check + Vite frontend bundle + server bundle |
-| `pnpm run build:server`     | esbuild server bundle only → `dist/server.js`     |
-| `pnpm run lint`             | ESLint + tsc type-check                           |
-| `pnpm run format`           | Prettier (write)                                  |
-| `pnpm run format:check`     | Prettier (check only)                             |
-| `pnpm test`                 | All tests (single run)                            |
-| `pnpm test:unit`            | Client + unit tests (no services needed)          |
-| `pnpm test:integration`     | Integration tests (requires NATS)                 |
-| `pnpm test:coverage`        | All tests with coverage report                    |
+| Script                  | Description                                       |
+| ----------------------- | ------------------------------------------------- |
+| `pnpm run dev`          | Vite dev server + Express via tsx (hot reload)    |
+| `pnpm run server`       | Express server only (tsx watch)                   |
+| `pnpm run build`        | Type-check + Vite frontend bundle + server bundle |
+| `pnpm run build:server` | esbuild server bundle only → `dist/server.js`     |
+| `pnpm run lint`         | ESLint + tsc type-check                           |
+| `pnpm run format`       | Prettier (write)                                  |
+| `pnpm run format:check` | Prettier (check only)                             |
+| `pnpm test`             | All tests (single run)                            |
+| `pnpm test:unit`        | Client + unit tests (no services needed)          |
+| `pnpm test:integration` | Integration tests (requires NATS)                 |
+| `pnpm test:coverage`    | All tests with coverage report                    |
 
 ## Testing
 
@@ -79,10 +79,10 @@ React component and hook tests live **colocated** with their source files in
 `src/client/` — the standard React community convention. Server-side tests live
 in `src/tests/`, split into two subdirectories:
 
-| Directory | What goes here |
-| --- | --- |
-| `src/tests/unit/` | Tests that mock all external dependencies (NATS, GitHub, Claude SDK). No real services required. Runs in ~2 seconds. |
-| `src/tests/integration/` | Tests that connect to real infrastructure. Currently: NATS pub/sub. Requires the NATS container to be running. |
+| Directory                | What goes here                                                                                                       |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `src/tests/unit/`        | Tests that mock all external dependencies (NATS, GitHub, Claude SDK). No real services required. Runs in ~2 seconds. |
+| `src/tests/integration/` | Tests that connect to real infrastructure. Currently: NATS pub/sub. Requires the NATS container to be running.       |
 
 **The rule of thumb:** mock only what you don't own (Claude API, GitHub API).
 Everything you do own — Express, WebSockets, NATS, the agent pool — should run
