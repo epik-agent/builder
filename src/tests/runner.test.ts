@@ -20,14 +20,18 @@ describe('githubToken catch block', () => {
     const savedConfigDir = process.env['GH_CONFIG_DIR']
     const savedPath = process.env['PATH']
     process.env['GH_CONFIG_DIR'] = '/tmp'
-    process.env['PATH'] = ''  // makes 'gh' not found → execSync throws
+    process.env['PATH'] = '' // makes 'gh' not found → execSync throws
 
     vi.doMock('@anthropic-ai/claude-agent-sdk', () => ({
       createSdkMcpServer: () => ({ type: 'sdk', name: 'nats', instance: {} }),
       tool: () => ({}),
       query: () => ({
         [Symbol.asyncIterator]() {
-          return { async next() { return { value: undefined, done: true } } }
+          return {
+            async next() {
+              return { value: undefined, done: true }
+            },
+          }
         },
         interrupt() {},
       }),
