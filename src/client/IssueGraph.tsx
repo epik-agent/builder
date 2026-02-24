@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import ForceGraph2D from 'react-force-graph-2d'
 import type { NodeObject } from 'react-force-graph-2d'
 import { themes as palette } from './theme'
@@ -102,18 +102,21 @@ export default function IssueGraph({ graph, events, agentIssueMap, repo }: Issue
     }
   }, [])
 
-  const containerRef = useRef<HTMLDivElement>(null)
+  const observerRef = useRef<ResizeObserver | null>(null)
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
 
-  useEffect(() => {
-    const el = containerRef.current
+  const containerRef = useCallback((el: HTMLDivElement | null) => {
+    if (observerRef.current) {
+      observerRef.current.disconnect()
+      observerRef.current = null
+    }
     if (!el) return
     const observer = new ResizeObserver((entries) => {
       const { width, height } = entries[0].contentRect
       setDimensions({ width, height })
     })
     observer.observe(el)
-    return () => observer.disconnect()
+    observerRef.current = observer
   }, [])
 
   const hasNodes = graph.nodes.length > 0
@@ -225,6 +228,7 @@ export default function IssueGraph({ graph, events, agentIssueMap, repo }: Issue
         linkDirectionalArrowRelPos={1}
         linkColor={() => palette.dark.graph.link}
         backgroundColor="transparent"
+        autoPauseRedraw={false}
       />
 
       {/* Legend */}
