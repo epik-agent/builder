@@ -22,15 +22,6 @@ export interface PRStatus {
 // Internal types
 // ---------------------------------------------------------------------------
 
-/** Raw GitHub issue shape returned by `gh api /repos/.../issues`. */
-interface RawIssue {
-  number: number
-  title: string
-  state: string
-  labels: Array<{ name: string }>
-  body: string | null
-}
-
 /** Raw PR shape returned by `gh api /repos/.../pulls`. */
 interface RawPR {
   number: number
@@ -39,57 +30,30 @@ interface RawPR {
   statusCheckRollup: { state: string } | null
 }
 
+/** Raw issue node shape returned by the GraphQL query. */
+interface GqlIssueNode {
+  number: number
+  title: string
+  state: string
+  labels: { nodes: Array<{ name: string }> }
+  blockedBy: { nodes: Array<{ number: number }> }
+}
+
+/** Shape of the GraphQL response from the repository query. */
+interface GqlResponse {
+  data: {
+    repository: {
+      issues: { nodes: GqlIssueNode[] }
+      projectsV2: { totalCount: number }
+    }
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
 
 const TYPE_LABELS = new Set(['Feature', 'Task', 'Bug'])
-
-/**
- * Parse dependency issue numbers from an issue body.
- *
- * Recognizes two conventions:
- *
- * 1. A `## Blocked by` section containing lines of the form `- #N`.
- *    Stops at the next `##` heading.
- *
- * 2. An inline `**Depends on:**` line containing `#N` references anywhere
- *    on the same line, e.g. `**Depends on:** #4 (agent skeleton), #1 (schema)`.
- */
-function parseBlockedBy(body: string | null): number[] {
-  if (!body) return []
-
-  const blockedBy: number[] = []
-  let inSection = false
-
-  for (const line of body.split('\n')) {
-    const trimmed = line.trim()
-
-    if (/^##\s+blocked\s+by/i.test(trimmed)) {
-      inSection = true
-      continue
-    }
-
-    if (inSection) {
-      if (/^##/.test(trimmed)) break // next heading — stop
-
-      const match = trimmed.match(/^-\s+#(\d+)/)
-      if (match) {
-        blockedBy.push(parseInt(match[1], 10))
-      }
-      continue
-    }
-
-    // Inline "**Depends on:**" convention: extract all #N references on the line
-    if (/^\*\*depends\s+on:\*\*/i.test(trimmed)) {
-      for (const m of trimmed.matchAll(/#(\d+)/g)) {
-        blockedBy.push(parseInt(m[1], 10))
-      }
-    }
-  }
-
-  return blockedBy
-}
 
 /**
  * Extract the recognized type label from a list of labels, or null.
@@ -125,11 +89,30 @@ export function runGhCommand(args: string[], bin = 'gh'): Promise<string> {
 // Public API
 // ---------------------------------------------------------------------------
 
+const ISSUES_QUERY = `
+{
+  repository(owner: $owner, name: $repo) {
+    issues(first: 100, states: [OPEN]) {
+      nodes {
+        number
+        title
+        state
+        labels(first: 10) { nodes { name } }
+        blockedBy(first: 50) { nodes { number } }
+      }
+    }
+    projectsV2(first: 1) {
+      totalCount
+    }
+  }
+}
+`.trim()
+
 /**
  * Load the issue dependency graph for a GitHub repository.
  *
- * Calls `gh api /repos/{owner}/{repo}/issues?state=open&per_page=100` and
- * parses each issue body for dependency references to build the graph.
+ * Uses a single GraphQL query to fetch all open issues and their native
+ * GitHub "blocked by" relationships in one round trip.
  *
  * @param owner - GitHub organization or user name.
  * @param repo  - Repository name.
@@ -143,31 +126,38 @@ export async function loadIssueGraph(
 ): Promise<IssueGraph> {
   const raw = await exec([
     'api',
-    `/repos/${owner}/${repo}/issues`,
-    '--method',
-    'GET',
+    'graphql',
     '-f',
-    'state=open',
+    `query=${ISSUES_QUERY}`,
     '-f',
-    'per_page=100',
+    `owner=${owner}`,
+    '-f',
+    `repo=${repo}`,
   ])
 
-  const issues: RawIssue[] = JSON.parse(raw)
+  const response: GqlResponse = JSON.parse(raw)
+  const { issues, projectsV2 } = response.data.repository
 
-  const nodes: IssueNode[] = issues.map((issue) => ({
+  const nodes: IssueNode[] = issues.nodes.map((issue) => ({
     number: issue.number,
     title: issue.title,
     state: issue.state as 'open' | 'closed',
-    type: parseType(issue.labels),
+    type: parseType(issue.labels.nodes),
     external: false,
-    blockedBy: parseBlockedBy(issue.body),
   }))
 
-  const edges: IssueEdge[] = nodes.flatMap((n) =>
-    n.blockedBy.map((blocker) => ({ source: blocker, target: n.number })),
+  const edges: IssueEdge[] = issues.nodes.flatMap((issue) =>
+    issue.blockedBy.nodes.map((blocker) => ({ source: blocker.number, target: issue.number })),
   )
 
-  return { nodes, edges }
+  const result: IssueGraph = { nodes, edges }
+
+  if (projectsV2.totalCount === 0) {
+    result.warning =
+      'This repository has no linked GitHub Project. Dependency tracking may be incomplete.'
+  }
+
+  return result
 }
 
 /**

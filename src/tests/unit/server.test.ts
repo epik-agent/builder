@@ -56,7 +56,6 @@ vi.mock('../../server/github.ts', () => ({
           state: 'open',
           type: 'Task',
           external: false,
-          blockedBy: [],
         },
       ],
     }),

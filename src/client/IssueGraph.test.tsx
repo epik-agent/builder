@@ -66,7 +66,6 @@ const sampleGraph: IssueGraphType = {
       state: 'open',
       type: 'Feature',
       external: false,
-      blockedBy: [],
     },
     {
       number: 2,
@@ -74,9 +73,8 @@ const sampleGraph: IssueGraphType = {
       state: 'open',
       type: 'Task',
       external: false,
-      blockedBy: [1],
     },
-    { number: 3, title: 'Done bug', state: 'closed', type: 'Bug', external: false, blockedBy: [1] },
+    { number: 3, title: 'Done bug', state: 'closed', type: 'Bug', external: false },
   ],
   edges: [
     { source: 1, target: 2 },
@@ -191,9 +189,7 @@ describe('IssueGraph', () => {
 
   it('produces no links for nodes with empty blockedBy', () => {
     const simpleGraph: IssueGraphType = {
-      nodes: [
-        { number: 1, title: 'Solo', state: 'open', type: null, external: false, blockedBy: [] },
-      ],
+      nodes: [{ number: 1, title: 'Solo', state: 'open', type: null, external: false }],
       edges: [],
     }
     render(<IssueGraph graph={simpleGraph} events={noEvents} />)

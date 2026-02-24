@@ -59,8 +59,6 @@ export interface IssueNode {
   type: 'Feature' | 'Task' | 'Bug' | null
   /** true when this node belongs to a different feature. */
   external: boolean
-  /** Issue numbers that must be resolved before this one can start. */
-  blockedBy: number[]
 }
 
 /** A directed edge in the issue dependency graph. */
@@ -76,6 +74,8 @@ export interface IssueGraph {
   nodes: IssueNode[]
   /** Directed edges derived from blockedBy; computed once in github.ts. */
   edges: IssueEdge[]
+  /** Set when the repo has no linked GitHub Project. */
+  warning?: string
 }
 
 // ---------------------------------------------------------------------------
