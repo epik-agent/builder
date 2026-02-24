@@ -14,6 +14,7 @@ jobs:
       contents: read
       packages: write
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/publish-docker
         with:
           username: ${{ github.actor }}

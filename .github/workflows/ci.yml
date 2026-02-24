@@ -9,6 +9,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-pnpm
       - uses: ./.github/actions/lint-js
 
@@ -22,6 +23,7 @@ jobs:
           - 8222:8222
           - 9222:9222
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-pnpm
       - run: pnpm test -- --coverage
       - uses: codecov/codecov-action@v5
