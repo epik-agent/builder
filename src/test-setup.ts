@@ -63,3 +63,38 @@ if (!window.matchMedia) {
     }),
   })
 }
+
+// jsdom doesn't implement ResizeObserver; stub it so components that use it
+// (e.g. IssueGraph) don't throw in tests. jsdom returns zeros from
+// getBoundingClientRect so dimensions will be { width: 0, height: 0 } —
+// that's fine; tests validate prop plumbing, not pixel values.
+if (!globalThis.ResizeObserver) {
+  class ResizeObserverStub {
+    private callback: ResizeObserverCallback
+    constructor(cb: ResizeObserverCallback) {
+      this.callback = cb
+    }
+    observe(target: Element) {
+      const rect = target.getBoundingClientRect()
+      this.callback(
+        [
+          {
+            contentRect: rect,
+            target,
+            borderBoxSize: [],
+            contentBoxSize: [],
+            devicePixelContentBoxSize: [],
+          } as unknown as ResizeObserverEntry,
+        ],
+        this as unknown as ResizeObserver,
+      )
+    }
+    unobserve() {}
+    disconnect() {}
+  }
+  Object.defineProperty(globalThis, 'ResizeObserver', {
+    writable: true,
+    configurable: true,
+    value: ResizeObserverStub,
+  })
+}

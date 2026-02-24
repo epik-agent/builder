@@ -222,7 +222,7 @@ export default function App() {
 
       {/* Top 50 %: Issue graph */}
       <div className="pane-top">
-        <IssueGraph graph={graph} events={events} agentIssueMap={agentIssueMap} />
+        <IssueGraph graph={graph} events={events} agentIssueMap={agentIssueMap} repo={repo} />
       </div>
 
       {/* Bottom 50 %: Agent tabs */}
