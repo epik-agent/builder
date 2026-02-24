@@ -1,5 +1,60 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { collect, makeIterator } from './test-fixtures.ts'
+import { collect, makeIterator, readProjectFile } from './test-fixtures.ts'
+
+// ---------------------------------------------------------------------------
+// githubToken: catch-block coverage
+// ---------------------------------------------------------------------------
+
+describe('githubToken catch block', () => {
+  beforeEach(() => {
+    vi.resetModules()
+  })
+
+  it('returns undefined when gh auth token throws (catch branch)', async () => {
+    // Ensure GH_TOKEN is not set so githubToken doesn't short-circuit.
+    const savedGhToken = process.env['GH_TOKEN']
+    delete process.env['GH_TOKEN']
+
+    // Point GH_CONFIG_DIR to /tmp which always exists — ensures existsSync returns true.
+    // Set PATH to empty so 'gh auth token' fails with ENOENT, triggering the catch block.
+    const savedConfigDir = process.env['GH_CONFIG_DIR']
+    const savedPath = process.env['PATH']
+    process.env['GH_CONFIG_DIR'] = '/tmp'
+    process.env['PATH'] = ''  // makes 'gh' not found → execSync throws
+
+    vi.doMock('@anthropic-ai/claude-agent-sdk', () => ({
+      createSdkMcpServer: () => ({ type: 'sdk', name: 'nats', instance: {} }),
+      tool: () => ({}),
+      query: () => ({
+        [Symbol.asyncIterator]() {
+          return { async next() { return { value: undefined, done: true } } }
+        },
+        interrupt() {},
+      }),
+    }))
+    const actualZod = await vi.importActual<typeof import('zod')>('zod')
+    vi.doMock('zod', () => actualZod)
+
+    const { runAgent } = await import('../server/runner.ts')
+    const events: string[] = []
+    await runAgent({
+      config: { model: 'claude-sonnet-4-6', cwd: '/tmp', systemPrompt: undefined },
+      sessionId: undefined,
+      prompt: 'test',
+      send: (e) => events.push(e.kind),
+      onSessionId: () => {},
+      natsClient: { publish: vi.fn() } as unknown as import('nats').NatsConnection,
+    })
+    // If we reach here without throwing, githubToken returned undefined gracefully
+    expect(events).toContain('turn_end')
+
+    // Restore env vars
+    if (savedGhToken !== undefined) process.env['GH_TOKEN'] = savedGhToken
+    if (savedConfigDir !== undefined) process.env['GH_CONFIG_DIR'] = savedConfigDir
+    else delete process.env['GH_CONFIG_DIR']
+    if (savedPath !== undefined) process.env['PATH'] = savedPath
+  })
+})
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -414,5 +469,22 @@ describe('type guard malformed input handling', () => {
     ]
     const { events } = await collect({ messages })
     expect(events).toContainEqual({ kind: 'tool_result', content: { nested: 'object' } })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// readProjectFile helper
+// ---------------------------------------------------------------------------
+
+describe('readProjectFile', () => {
+  it('returns file contents for an existing project file', () => {
+    const contents = readProjectFile('package.json')
+    // package.json should exist and contain the project name
+    expect(contents).toContain('console')
+  })
+
+  it('returns empty string for a non-existent file (catch branch)', () => {
+    const contents = readProjectFile('this-file-does-not-exist-xyz-abc-123.txt')
+    expect(contents).toBe('')
   })
 })

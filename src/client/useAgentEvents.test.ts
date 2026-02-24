@@ -405,6 +405,34 @@ describe('useAgentEvents', () => {
     expect(MockWebSocket.instances).toHaveLength(3)
   })
 
+  it('schedules reconnect when WebSocket constructor throws', () => {
+    // Replace the WebSocket global with one that throws on construction
+    class ThrowingWebSocket {
+      static instances: ThrowingWebSocket[] = []
+      constructor() {
+        ThrowingWebSocket.instances.push(this)
+        throw new Error('Invalid URL')
+      }
+    }
+    vi.stubGlobal('WebSocket', ThrowingWebSocket)
+
+    const { result } = renderHook(() => useAgentEvents())
+
+    // Connection status should be 'disconnected' after the constructor throws
+    expect(result.current.connectionStatus).toBe('disconnected')
+
+    // Restore the normal MockWebSocket for the reconnect attempt
+    vi.stubGlobal('WebSocket', MockWebSocket)
+
+    // Advance timers — a reconnect should be scheduled
+    act(() => {
+      vi.advanceTimersByTime(1000)
+    })
+
+    // A new WebSocket should have been created via the reconnect
+    expect(MockWebSocket.instances.length).toBeGreaterThanOrEqual(1)
+  })
+
   it('accumulates events for an unknown agentId using ?? [] fallback', () => {
     const { result } = renderHook(() => useAgentEvents())
     const ws = MockWebSocket.instances[0]

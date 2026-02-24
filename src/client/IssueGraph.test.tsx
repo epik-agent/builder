@@ -11,13 +11,21 @@ import type { AgentEvent, AgentId, IssueGraph as IssueGraphType } from './types'
 
 let capturedGraphData: GraphData | null = null
 let capturedNodeColorFn: ((node: NodeObject) => string) | null = null
+let capturedLinkColorFn: ((link: LinkObject) => string) | null = null
 
 vi.mock('react-force-graph-2d', () => ({
-  default: vi.fn((props: { graphData?: GraphData; nodeColor?: (node: NodeObject) => string }) => {
-    capturedGraphData = props.graphData ?? null
-    capturedNodeColorFn = props.nodeColor ?? null
-    return null
-  }),
+  default: vi.fn(
+    (props: {
+      graphData?: GraphData
+      nodeColor?: (node: NodeObject) => string
+      linkColor?: (link: LinkObject) => string
+    }) => {
+      capturedGraphData = props.graphData ?? null
+      capturedNodeColorFn = props.nodeColor ?? null
+      capturedLinkColorFn = props.linkColor ?? null
+      return null
+    },
+  ),
 }))
 
 // ---------------------------------------------------------------------------
@@ -61,6 +69,7 @@ describe('IssueGraph', () => {
   beforeEach(() => {
     capturedGraphData = null
     capturedNodeColorFn = null
+    capturedLinkColorFn = null
   })
 
   afterEach(() => {
@@ -114,6 +123,34 @@ describe('IssueGraph', () => {
       (l) => (l as LinkObject).source === 1 && (l as LinkObject).target === 3,
     )
     expect(link13).toBeDefined()
+  })
+
+  it('uses empty array fallback when agentId is not in events map', () => {
+    // Pass an agentIssueMap with a key that has no corresponding entry in events.
+    // This exercises the `events[agentId] ?? []` fallback branch at IssueGraph.tsx:52.
+    const partialEvents: Partial<Record<AgentId, AgentEvent[]>> = {
+      supervisor: [],
+      // worker-0, worker-1, worker-2 intentionally omitted
+    }
+    const agentIssueMap: Partial<Record<AgentId, number>> = { 'worker-0': 1 }
+
+    expect(() =>
+      render(
+        <IssueGraph
+          graph={sampleGraph}
+          events={partialEvents as Record<AgentId, AgentEvent[]>}
+          agentIssueMap={agentIssueMap}
+        />,
+      ),
+    ).not.toThrow()
+  })
+
+  it('linkColor returns a non-empty string for any link', () => {
+    render(<IssueGraph graph={sampleGraph} events={noEvents} />)
+    expect(capturedLinkColorFn).not.toBeNull()
+    const color = capturedLinkColorFn!({} as LinkObject)
+    expect(typeof color).toBe('string')
+    expect(color.length).toBeGreaterThan(0)
   })
 
   it('produces no links for nodes with empty blockedBy', () => {

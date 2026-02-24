@@ -135,11 +135,14 @@ const AssistantBlocks = memo(function AssistantBlocks({ blocks }: { blocks: Bloc
   return (
     <div className="msg-assistant-wrapper">
       {blocks.map((block, i) => {
-        if (block.type === 'text') return <AssistantTextBlock key={i} text={block.text} />
-        if (block.type === 'tool_use')
-          return <ToolUseCard key={i} name={block.name} input={block.input} />
-        if (block.type === 'tool_result') return <ToolResultCard key={i} content={block.content} />
-        return null
+        switch (block.type) {
+          case 'text':
+            return <AssistantTextBlock key={i} text={block.text} />
+          case 'tool_use':
+            return <ToolUseCard key={i} name={block.name} input={block.input} />
+          case 'tool_result':
+            return <ToolResultCard key={i} content={block.content} />
+        }
       })}
     </div>
   )
