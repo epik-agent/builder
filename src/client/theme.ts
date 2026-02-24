@@ -113,7 +113,7 @@ export const themes: { dark: Palette; light: Palette } = {
       closed: '#34d399',
       open: '#f5a623',
       active: '#00e599',
-      link: 'rgba(255, 255, 255, 0.10)',
+      link: 'rgba(255, 255, 255, 0.50)',
     },
   },
   light: {
@@ -157,7 +157,7 @@ export const themes: { dark: Palette; light: Palette } = {
       closed: '#34d399',
       open: '#d4940a',
       active: '#00b377',
-      link: 'rgba(0, 0, 0, 0.08)',
+      link: 'rgba(0, 0, 0, 0.40)',
     },
   },
 }
