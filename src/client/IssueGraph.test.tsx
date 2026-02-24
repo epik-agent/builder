@@ -35,7 +35,7 @@ vi.mock('react-force-graph-2d', () => ({
         color: string,
         ctx: CanvasRenderingContext2D,
       ) => void
-      nodeCanvasObjectMode?: string
+      nodeCanvasObjectMode?: string | ((node: NodeObject) => string)
       onNodeClick?: (node: NodeObject, event: MouseEvent) => void
       width?: number
       height?: number
@@ -392,9 +392,10 @@ describe('IssueGraph', () => {
 
   // ── Custom node rendering ─────────────────────────────────────────────────
 
-  it('passes nodeCanvasObjectMode="replace" to ForceGraph', () => {
+  it('passes nodeCanvasObjectMode as a function returning "replace" to ForceGraph', () => {
     render(<IssueGraph graph={sampleGraph} events={noEvents} />)
-    expect(capturedNodeCanvasObjectMode).toBe('replace')
+    expect(typeof capturedNodeCanvasObjectMode).toBe('function')
+    expect((capturedNodeCanvasObjectMode as (node: NodeObject) => string)({})).toBe('replace')
   })
 
   it('passes a nodeCanvasObject function to ForceGraph', () => {
