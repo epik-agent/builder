@@ -290,6 +290,41 @@ describe('WebSocket /ws', () => {
     })
   })
 
+  it('POST /api/message does not broadcast an inject event to WebSocket clients', async () => {
+    await new Promise<void>((resolve, reject) => {
+      serverModule.server.listen(0, () => {
+        const addr = serverModule.server.address() as { port: number }
+        const ws = new WebSocket(`ws://localhost:${addr.port}/ws`)
+
+        const received: ServerMessage[] = []
+
+        ws.on('message', async (data) => {
+          const msg: ServerMessage = JSON.parse(data.toString())
+          received.push(msg)
+
+          // After pool_state arrives, POST a message and wait to see if an inject echoes back
+          if (msg.type === 'pool_state') {
+            await request(serverModule.app)
+              .post('/api/message')
+              .send({ agentId: 'supervisor', text: 'hello' })
+
+            // Wait long enough for any echo to arrive
+            await new Promise((r) => setTimeout(r, 200))
+
+            const injectEvents = received.filter(
+              (m) => m.type === 'agent_event' && m.event.kind === 'inject',
+            )
+            expect(injectEvents).toHaveLength(0)
+            ws.close()
+            resolve()
+          }
+        })
+
+        ws.on('error', reject)
+      })
+    })
+  })
+
   it('does not send events to a closed WebSocket client', async () => {
     // This test verifies the ws.readyState === WebSocket.OPEN guard in the listener.
     // We connect, wait for the pool_state, then close from the server side via wss,
