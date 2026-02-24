@@ -92,7 +92,6 @@ describe('types', () => {
       state: 'open',
       type: 'Task',
       external: false,
-      blockedBy: [2, 3],
     }
     expectTypeOf(node).toExtend<IssueNode>()
     expectTypeOf(node.type).toExtend<'Feature' | 'Task' | 'Bug' | null>()

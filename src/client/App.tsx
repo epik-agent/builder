@@ -280,6 +280,11 @@ export default function App() {
 
       {/* Top 50 %: Issue graph */}
       <div className="pane-top">
+        {graph.warning && (
+          <div className="warning-banner" role="alert">
+            {graph.warning}
+          </div>
+        )}
         <IssueGraph graph={graph} events={events} agentIssueMap={agentIssueMap} repo={repo} />
       </div>
 

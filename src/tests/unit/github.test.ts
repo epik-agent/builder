@@ -5,44 +5,60 @@ import { loadIssueGraph, getPRStatus, runGhCommand } from '../../server/github.t
 // Fixtures
 // ---------------------------------------------------------------------------
 
-/** Minimal gh api /repos/.../issues response shape */
-const ISSUE_FIXTURE = [
-  {
-    number: 1,
-    title: 'Root feature',
-    state: 'open',
-    labels: [{ name: 'Feature' }],
-    body: '## Overview\n\nA root feature with no dependencies.',
-  },
+/** Minimal GraphQL response shape for loadIssueGraph */
+function makeGqlResponse(
+  issues: Array<{
+    number: number
+    title: string
+    state: string
+    labels: Array<{ name: string }>
+    blockedBy: Array<{ number: number }>
+  }>,
+  projectsV2TotalCount = 1,
+) {
+  return {
+    data: {
+      repository: {
+        issues: {
+          nodes: issues.map((i) => ({
+            number: i.number,
+            title: i.title,
+            state: i.state,
+            labels: { nodes: i.labels },
+            blockedBy: { nodes: i.blockedBy },
+          })),
+        },
+        projectsV2: { totalCount: projectsV2TotalCount },
+      },
+    },
+  }
+}
+
+const GQL_ISSUE_FIXTURE = makeGqlResponse([
+  { number: 1, title: 'Root feature', state: 'open', labels: [{ name: 'Feature' }], blockedBy: [] },
   {
     number: 2,
     title: 'Blocked task',
     state: 'open',
     labels: [{ name: 'Task' }],
-    body: '## Overview\n\nA task.\n\n## Blocked by\n\n- #1\n',
+    blockedBy: [{ number: 1 }],
   },
   {
     number: 3,
     title: 'Multi-blocked task',
     state: 'open',
     labels: [{ name: 'Bug' }],
-    body: '## Blocked by\n\n- #1\n- #2\n',
+    blockedBy: [{ number: 1 }, { number: 2 }],
   },
-  {
-    number: 4,
-    title: 'No type label',
-    state: 'open',
-    labels: [],
-    body: null,
-  },
+  { number: 4, title: 'No type label', state: 'open', labels: [], blockedBy: [] },
   {
     number: 5,
     title: 'Unlabelled with body',
     state: 'open',
     labels: [{ name: 'enhancement' }],
-    body: 'Some description with no blocked-by section.',
+    blockedBy: [],
   },
-]
+])
 
 /** PR list fixture for getPRStatus */
 const PR_FIXTURE_OPEN = [
@@ -86,7 +102,12 @@ const PR_FIXTURE_PENDING = [
 // ---------------------------------------------------------------------------
 
 /** Build a mock exec function that resolves with the serialized fixture. */
-function makeExec(fixture: object[]): (args: string[]) => Promise<string> {
+function makeExec(fixture: object): (args: string[]) => Promise<string> {
+  return vi.fn().mockResolvedValue(JSON.stringify(fixture))
+}
+
+/** Build a mock exec function for PR list (array response). */
+function makeExecArray(fixture: object[]): (args: string[]) => Promise<string> {
   return vi.fn().mockResolvedValue(JSON.stringify(fixture))
 }
 
@@ -106,104 +127,47 @@ describe('github', () => {
 
   describe('loadIssueGraph', () => {
     it('returns an IssueGraph with nodes for each open issue', async () => {
-      const graph = await loadIssueGraph('owner', 'repo', makeExec(ISSUE_FIXTURE))
-      expect(graph.nodes).toHaveLength(ISSUE_FIXTURE.length)
+      const graph = await loadIssueGraph('owner', 'repo', makeExec(GQL_ISSUE_FIXTURE))
+      expect(graph.nodes).toHaveLength(5)
     })
 
-    it('sets the correct issue number and title on each node', async () => {
-      const graph = await loadIssueGraph('owner', 'repo', makeExec(ISSUE_FIXTURE))
+    it('sets the correct issue number, title and state on each node', async () => {
+      const graph = await loadIssueGraph('owner', 'repo', makeExec(GQL_ISSUE_FIXTURE))
       const node1 = graph.nodes.find((n) => n.number === 1)
       expect(node1?.title).toBe('Root feature')
       expect(node1?.state).toBe('open')
     })
 
-    it('parses a single "Blocked by" dependency', async () => {
-      const graph = await loadIssueGraph('owner', 'repo', makeExec(ISSUE_FIXTURE))
-      const node2 = graph.nodes.find((n) => n.number === 2)
-      expect(node2?.blockedBy).toEqual([1])
-    })
-
-    it('parses multiple "Blocked by" dependencies', async () => {
-      const graph = await loadIssueGraph('owner', 'repo', makeExec(ISSUE_FIXTURE))
-      const node3 = graph.nodes.find((n) => n.number === 3)
-      expect(node3?.blockedBy).toEqual([1, 2])
-    })
-
-    it('returns empty blockedBy array when no dependencies are listed', async () => {
-      const graph = await loadIssueGraph('owner', 'repo', makeExec(ISSUE_FIXTURE))
-      const node1 = graph.nodes.find((n) => n.number === 1)
-      expect(node1?.blockedBy).toEqual([])
-    })
-
-    it('returns empty blockedBy when body is null', async () => {
-      const graph = await loadIssueGraph('owner', 'repo', makeExec(ISSUE_FIXTURE))
-      const node4 = graph.nodes.find((n) => n.number === 4)
-      expect(node4?.blockedBy).toEqual([])
-    })
-
     it('maps Feature label to type "Feature"', async () => {
-      const graph = await loadIssueGraph('owner', 'repo', makeExec(ISSUE_FIXTURE))
+      const graph = await loadIssueGraph('owner', 'repo', makeExec(GQL_ISSUE_FIXTURE))
       expect(graph.nodes.find((n) => n.number === 1)?.type).toBe('Feature')
     })
 
     it('maps Task label to type "Task"', async () => {
-      const graph = await loadIssueGraph('owner', 'repo', makeExec(ISSUE_FIXTURE))
+      const graph = await loadIssueGraph('owner', 'repo', makeExec(GQL_ISSUE_FIXTURE))
       expect(graph.nodes.find((n) => n.number === 2)?.type).toBe('Task')
     })
 
     it('maps Bug label to type "Bug"', async () => {
-      const graph = await loadIssueGraph('owner', 'repo', makeExec(ISSUE_FIXTURE))
+      const graph = await loadIssueGraph('owner', 'repo', makeExec(GQL_ISSUE_FIXTURE))
       expect(graph.nodes.find((n) => n.number === 3)?.type).toBe('Bug')
     })
 
     it('sets type to null when no recognized label is present', async () => {
-      const graph = await loadIssueGraph('owner', 'repo', makeExec(ISSUE_FIXTURE))
+      const graph = await loadIssueGraph('owner', 'repo', makeExec(GQL_ISSUE_FIXTURE))
       expect(graph.nodes.find((n) => n.number === 4)?.type).toBeNull()
       expect(graph.nodes.find((n) => n.number === 5)?.type).toBeNull()
     })
 
     it('sets external to false for all nodes by default', async () => {
-      const graph = await loadIssueGraph('owner', 'repo', makeExec(ISSUE_FIXTURE))
+      const graph = await loadIssueGraph('owner', 'repo', makeExec(GQL_ISSUE_FIXTURE))
       for (const node of graph.nodes) {
         expect(node.external).toBe(false)
       }
     })
 
-    it('calls gh api with the correct endpoint', async () => {
-      const exec = vi
-        .fn<(args: string[]) => Promise<string>>()
-        .mockResolvedValue(JSON.stringify([]))
-      await loadIssueGraph('myorg', 'myrepo', exec)
-      const [args] = exec.mock.calls[0]
-      expect(args).toContain('/repos/myorg/myrepo/issues')
-      expect(args.join(' ')).toContain('state=open')
-    })
-
-    it('handles an empty issues list', async () => {
-      const graph = await loadIssueGraph('owner', 'repo', makeExec([]))
-      expect(graph.nodes).toHaveLength(0)
-    })
-
-    it('stops parsing blockedBy when a subsequent heading is encountered', async () => {
-      // A "## Blocked by" section followed by another ## heading — the parser should stop
-      // at the second heading and not include subsequent lines.
-      const issueWithHeadingBreak = [
-        {
-          number: 10,
-          title: 'Issue with headed sections',
-          state: 'open',
-          labels: [],
-          body: '## Blocked by\n\n- #5\n- #6\n\n## Implementation\n\n- #99\n',
-        },
-      ]
-      const graph = await loadIssueGraph('owner', 'repo', makeExec(issueWithHeadingBreak))
-      const node = graph.nodes.find((n) => n.number === 10)
-      // Should have parsed 5 and 6, but stopped at ## Implementation
-      expect(node?.blockedBy).toEqual([5, 6])
-    })
-
-    it('derives directed edges from blockedBy lists', async () => {
-      const graph = await loadIssueGraph('owner', 'repo', makeExec(ISSUE_FIXTURE))
+    it('derives directed edges from blockedBy nodes', async () => {
+      const graph = await loadIssueGraph('owner', 'repo', makeExec(GQL_ISSUE_FIXTURE))
       // node 2 blockedBy [1] → edge { source: 1, target: 2 }
       // node 3 blockedBy [1, 2] → edges { source: 1, target: 3 }, { source: 2, target: 3 }
       expect(graph.edges).toContainEqual({ source: 1, target: 2 })
@@ -211,9 +175,40 @@ describe('github', () => {
       expect(graph.edges).toContainEqual({ source: 2, target: 3 })
     })
 
-    it('returns empty edges for a graph with no dependencies', async () => {
-      const graph = await loadIssueGraph('owner', 'repo', makeExec([]))
+    it('calls gh api graphql with owner and repo variables', async () => {
+      const exec = vi
+        .fn<(args: string[]) => Promise<string>>()
+        .mockResolvedValue(JSON.stringify(makeGqlResponse([])))
+      await loadIssueGraph('myorg', 'myrepo', exec)
+      const [args] = exec.mock.calls[0]
+      expect(args).toContain('graphql')
+      expect(args.join(' ')).toContain('owner=myorg')
+      expect(args.join(' ')).toContain('repo=myrepo')
+    })
+
+    it('handles an empty issues list', async () => {
+      const graph = await loadIssueGraph('owner', 'repo', makeExec(makeGqlResponse([])))
+      expect(graph.nodes).toHaveLength(0)
       expect(graph.edges).toEqual([])
+    })
+
+    it('returns empty edges for a graph with no dependencies', async () => {
+      const noDepFixture = makeGqlResponse([
+        { number: 1, title: 'A', state: 'open', labels: [], blockedBy: [] },
+      ])
+      const graph = await loadIssueGraph('owner', 'repo', makeExec(noDepFixture))
+      expect(graph.edges).toEqual([])
+    })
+
+    it('sets warning when projectsV2 totalCount is 0', async () => {
+      const fixture = makeGqlResponse([], 0)
+      const graph = await loadIssueGraph('owner', 'repo', makeExec(fixture))
+      expect(graph.warning).toBeTruthy()
+    })
+
+    it('does not set warning when projectsV2 totalCount is greater than 0', async () => {
+      const graph = await loadIssueGraph('owner', 'repo', makeExec(GQL_ISSUE_FIXTURE))
+      expect(graph.warning).toBeUndefined()
     })
 
     it('rejects on gh cli error', async () => {
@@ -234,25 +229,25 @@ describe('github', () => {
 
   describe('getPRStatus', () => {
     it('returns null when no PR is associated with the issue', async () => {
-      const result = await getPRStatus('owner', 'repo', 99, makeExec([]))
+      const result = await getPRStatus('owner', 'repo', 99, makeExecArray([]))
       expect(result).toBeNull()
     })
 
     it('returns checksState "success" when CI is green and branch is mergeable', async () => {
-      const result = await getPRStatus('owner', 'repo', 2, makeExec(PR_FIXTURE_OPEN))
+      const result = await getPRStatus('owner', 'repo', 2, makeExecArray(PR_FIXTURE_OPEN))
       expect(result).not.toBeNull()
       expect(result?.checksState).toBe('success')
       expect(result?.mergeable).toBe(true)
     })
 
     it('returns checksState "failure" and mergeable false when CI fails and branch conflicts', async () => {
-      const result = await getPRStatus('owner', 'repo', 3, makeExec(PR_FIXTURE_FAILING))
+      const result = await getPRStatus('owner', 'repo', 3, makeExecArray(PR_FIXTURE_FAILING))
       expect(result?.checksState).toBe('failure')
       expect(result?.mergeable).toBe(false)
     })
 
     it('returns checksState "pending" when statusCheckRollup is null', async () => {
-      const result = await getPRStatus('owner', 'repo', 1, makeExec(PR_FIXTURE_PENDING))
+      const result = await getPRStatus('owner', 'repo', 1, makeExecArray(PR_FIXTURE_PENDING))
       expect(result?.checksState).toBe('pending')
     })
 
@@ -265,7 +260,7 @@ describe('github', () => {
           statusCheckRollup: { state: 'ERROR' },
         },
       ]
-      const result = await getPRStatus('owner', 'repo', 5, makeExec(errorFixture))
+      const result = await getPRStatus('owner', 'repo', 5, makeExecArray(errorFixture))
       expect(result?.checksState).toBe('failure')
     })
 
@@ -278,18 +273,18 @@ describe('github', () => {
           statusCheckRollup: { state: 'IN_PROGRESS' },
         },
       ]
-      const result = await getPRStatus('owner', 'repo', 6, makeExec(unknownFixture))
+      const result = await getPRStatus('owner', 'repo', 6, makeExecArray(unknownFixture))
       expect(result?.checksState).toBe('pending')
     })
 
     it('includes prNumber in the result', async () => {
-      const result = await getPRStatus('owner', 'repo', 2, makeExec(PR_FIXTURE_OPEN))
+      const result = await getPRStatus('owner', 'repo', 2, makeExecArray(PR_FIXTURE_OPEN))
       expect(result?.prNumber).toBe(101)
     })
 
     it('returns null when no PR body matches the issue number', async () => {
       const fixture = [{ number: 200, body: null, mergeable: null, statusCheckRollup: null }]
-      const result = await getPRStatus('owner', 'repo', 42, makeExec(fixture))
+      const result = await getPRStatus('owner', 'repo', 42, makeExecArray(fixture))
       expect(result).toBeNull()
     })
 
@@ -303,7 +298,7 @@ describe('github', () => {
           statusCheckRollup: {},
         },
       ]
-      const result = await getPRStatus('owner', 'repo', 7, makeExec(fixture))
+      const result = await getPRStatus('owner', 'repo', 7, makeExecArray(fixture))
       expect(result?.checksState).toBe('pending')
     })
   })
