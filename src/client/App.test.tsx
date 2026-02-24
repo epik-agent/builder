@@ -243,6 +243,60 @@ describe('App', () => {
     })
   })
 
+  describe('repo history datalist', () => {
+    it('renders a datalist with id="repo-history"', () => {
+      render(<App />)
+      expect(document.getElementById('repo-history')).toBeInTheDocument()
+    })
+
+    it('repo input has list="repo-history" attribute', () => {
+      render(<App />)
+      const input = screen.getByPlaceholderText(/owner\/repo/i)
+      expect(input).toHaveAttribute('list', 'repo-history')
+    })
+
+    it('datalist shows the repo as an option after loading it', async () => {
+      const user = userEvent.setup()
+      render(<App />)
+      const input = screen.getByPlaceholderText(/owner\/repo/i)
+      await user.clear(input)
+      await user.type(input, 'owner/repo')
+      await user.click(screen.getByRole('button', { name: /load/i }))
+
+      const datalist = document.getElementById('repo-history')
+      const options = datalist?.querySelectorAll('option')
+      const values = Array.from(options ?? []).map((o) => o.value)
+      expect(values).toContain('owner/repo')
+    })
+
+    it('does not duplicate a repo when loaded twice', async () => {
+      const user = userEvent.setup()
+      render(<App />)
+      const input = screen.getByPlaceholderText(/owner\/repo/i)
+      for (let i = 0; i < 2; i++) {
+        await user.clear(input)
+        await user.type(input, 'owner/repo')
+        await user.click(screen.getByRole('button', { name: /load/i }))
+      }
+
+      const datalist = document.getElementById('repo-history')
+      const options = datalist?.querySelectorAll('option')
+      const values = Array.from(options ?? []).map((o) => o.value)
+      expect(values.filter((v) => v === 'owner/repo')).toHaveLength(1)
+    })
+
+    it('pre-existing localStorage history appears as options on mount', () => {
+      localStorage.setItem('repoHistory', JSON.stringify(['facebook/react', 'torvalds/linux']))
+      render(<App />)
+
+      const datalist = document.getElementById('repo-history')
+      const options = datalist?.querySelectorAll('option')
+      const values = Array.from(options ?? []).map((o) => o.value)
+      expect(values).toContain('facebook/react')
+      expect(values).toContain('torvalds/linux')
+    })
+  })
+
   it('does not scroll on initial load', () => {
     const spy = vi.fn()
     HTMLElement.prototype.scrollIntoView = spy

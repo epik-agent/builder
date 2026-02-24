@@ -3,6 +3,7 @@ import AgentTabs from './AgentTabs'
 import IssueGraph from './IssueGraph'
 import { resolveApiBase, useAgentEvents } from './useAgentEvents'
 import { useAgentIssueMap } from './useAgentIssueMap'
+import { useRepoHistory } from './useRepoHistory'
 import { useTheme } from './useTheme'
 import type { ConnectionStatus, IssueGraph as IssueGraphType } from './types'
 
@@ -84,6 +85,7 @@ function MoonIcon() {
 
 export default function App() {
   const { theme, toggleTheme } = useTheme()
+  const { history: repoHistory, pushRepo } = useRepoHistory()
   const { events, pool, connectionStatus, sendMessage, interrupt } = useAgentEvents()
   const apiBase = resolveApiBase()
   const agentIssueMap = useAgentIssueMap(events)
@@ -117,9 +119,12 @@ export default function App() {
     (e: SyntheticEvent<HTMLFormElement>) => {
       e.preventDefault()
       const trimmed = repoInput.trim()
-      if (trimmed) setRepo(trimmed)
+      if (trimmed) {
+        setRepo(trimmed)
+        pushRepo(trimmed)
+      }
     },
-    [repoInput],
+    [repoInput, pushRepo],
   )
 
   const { running } = pool
@@ -204,7 +209,13 @@ export default function App() {
             onChange={(e) => setRepoInput(e.target.value)}
             placeholder="owner/repo"
             aria-label="GitHub repository"
+            list="repo-history"
           />
+          <datalist id="repo-history">
+            {repoHistory.map((r) => (
+              <option key={r} value={r} />
+            ))}
+          </datalist>
           <button type="submit" className="btn btn-secondary">
             Load
           </button>
